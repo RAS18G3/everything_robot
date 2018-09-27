@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>er_motor_controller</name>
+  <version>0.0.1</version>
+  <description>PID controller to controll the angular velocity of a single motor</description>
+
+
+  <author email="leonardb@kth.se">Leonard Bruns</author>
+  <author email="fradesjo@kth.se">Fanny Radesjö</author>
+  <author email="gupett@kth.se">Gustav Pettersson</author>
+  <author email="tomaszuk@kth.se">Michal Tomaszuk</author>
+
+  <maintainer email="leonardb@kth.se">Leonard Bruns</maintainer>
+  <maintainer email="fradesjo@kth.se">Fanny Radesjö</maintainer>
+  <maintainer email="gupett@kth.se">Gustav Pettersson</maintainer>
+  <maintainer email="tomaszuk@kth.se">Michal Tomaszuk</maintainer>
+
+  <license>MIT</license>
+
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>phidgets</build_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>phidgets</exec_depend>
+
+
+  <export>
+
+  </export>
+</package>

@@ -8,7 +8,7 @@
 
 const int controller_frequency = 25;
 
-const double ticks_per_rev = 3591.84;
+const double ticks_per_rev = 3591.84/4;
 
 double omega = 0;
 

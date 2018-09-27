@@ -36,7 +36,7 @@ void twistCallback(const geometry_msgs::Twist::ConstPtr& twist_msg)
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "cartesian_motor_controller_node");
+  ros::init(argc, argv, "er_cartesian_motor_controller_node");
 
   ros::NodeHandle n;
 

@@ -48,7 +48,7 @@ void encoderCallback(const phidgets::motor_encoder::ConstPtr& encoder_msg)
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "motor_controller_node");
+  ros::init(argc, argv, "er_motor_controller_node");
 
   ros::NodeHandle n;
 

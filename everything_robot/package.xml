@@ -8,19 +8,18 @@
 
   <author email="leonardb@kth.se">Leonard Bruns</author>
   <author email="fradesjo@kth.se">Fanny Radesjö</author>
-  <author email="@kth.se">Gustav Pettersson</author>
-  <author email="@kth.se">Michal Tomaszuk</author>
+  <author email="gupett@kth.se">Gustav Pettersson</author>
+  <author email="tomaszuk@kth.se">Michal Tomaszuk</author>
 
   <maintainer email="leonardb@kth.se">Leonard Bruns</maintainer>
   <maintainer email="fradesjo@kth.se">Fanny Radesjö</maintainer>
-  <maintainer email="@kth.se">Gustav Pettersson</maintainer>
-  <maintainer email="@kth.se">Michal Tomaszuk</maintainer>
+  <maintainer email="gupett@kth.se">Gustav Pettersson</maintainer>
+  <maintainer email="tomaszuk@kth.se">Michal Tomaszuk</maintainer>
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <!--
-      <run_depend>ras_lab1_open_loop_control</run_depend>
-  -->
+  <run_depend>er_motor_controller</run_depend>
+
   <export>
     <metapackage/>
   </export>

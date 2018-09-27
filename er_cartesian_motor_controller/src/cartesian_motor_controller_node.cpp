@@ -30,8 +30,8 @@ void twistCallback(const geometry_msgs::Twist::ConstPtr& twist_msg)
   angular_velocity_left_pub.publish(angular_velocity_left_msg);
   angular_velocity_right_pub.publish(angular_velocity_right_msg);
 
-  ROS_INFO("omega_left: [%f]", omega_left);
-  ROS_INFO("omega_right: [%f]", omega_right);
+  ROS_DEBUG("omega_left: [%f]", omega_left);
+  ROS_DEBUG("omega_right: [%f]", omega_right);
 }
 
 int main(int argc, char **argv)

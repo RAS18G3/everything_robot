@@ -26,7 +26,7 @@ ros::Time last_encoder_reading_time;
 void angularVelocityCallback(const std_msgs::Float64::ConstPtr& angular_velocity_msg)
 {
   omega_goal = angular_velocity_msg->data;
-  ROS_INFO("omega_goal: [%f]", omega_goal);
+  ROS_DEBUG("omega_goal: [%f]", omega_goal);
 }
 
 void encoderCallback(const phidgets::motor_encoder::ConstPtr& encoder_msg)
@@ -40,7 +40,7 @@ void encoderCallback(const phidgets::motor_encoder::ConstPtr& encoder_msg)
   else {
     double delta_t = (encoder_msg->header.stamp-last_encoder_reading_time).toSec();
     omega = 2 * M_PI * (double)(encoder_msg->count - last_encoder_reading) / (delta_t * ticks_per_rev);
-    ROS_INFO("omega: [%f], T: [%f]", omega, 2*M_PI/omega);
+    ROS_DEBUG("omega: [%f], T: [%f]", omega, 2*M_PI/omega);
     last_encoder_reading = encoder_msg->count;
     last_encoder_reading_time = encoder_msg->header.stamp;
   }
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     else if(p*error + i*error_i < -100)
         error_i = (-100 - p*error) / i;
 
-    ROS_INFO("error: %f", error);
+    ROS_DEBUG("error: %f", error);
 
     std_msgs::Float32 pwm_msg;
     pwm_msg.data = p*error + i*error_i;

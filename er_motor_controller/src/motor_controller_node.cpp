@@ -14,9 +14,9 @@ double omega = 0;
 
 double omega_goal = 0;
 
-// use PI controller, since 10 hz is probabaly to low to use d controller in a meaningful way
-double p = 300;
-double i = 600;
+// use PI controller, since 25hz is probabaly to low to use d controller in a meaningful way
+double p = 0;
+double i = 10;
 
 double error_i = 0;
 
@@ -41,7 +41,6 @@ void encoderCallback(const phidgets::motor_encoder::ConstPtr& encoder_msg)
     double delta_t = (encoder_msg->header.stamp-last_encoder_reading_time).toSec();
     omega = 2 * M_PI * (double)(encoder_msg->count - last_encoder_reading) / (delta_t * ticks_per_rev);
     ROS_INFO("omega: [%f], T: [%f]", omega, 2*M_PI/omega);
-    // ROS_INFO("%d", encoder_msg->count-last_encoder_reading);
     last_encoder_reading = encoder_msg->count;
     last_encoder_reading_time = encoder_msg->header.stamp;
   }
@@ -69,7 +68,7 @@ int main(int argc, char **argv)
     error_i += error / controller_frequency;
 
     // cap i, s.t. final pwm signal is not outside of boundaries
-    // this will cap the pwm signial between -255 and 255 as well
+    // this will cap the pwm signial between -100 and 100 as well
     // and prevents i to get very high for unreachable goals and thus
     // taking time to get back up/down
     if(p*error + i*error_i > 100)
@@ -77,10 +76,12 @@ int main(int argc, char **argv)
     else if(p*error + i*error_i < -100)
         error_i = (-100 - p*error) / i;
 
+    ROS_INFO("error: %f", error);
+
     std_msgs::Float32 pwm_msg;
     pwm_msg.data = p*error + i*error_i;
 
-    //pwm_pub.publish(pwm_msg);
+    pwm_pub.publish(pwm_msg);
 
     loop_rate.sleep();
   }

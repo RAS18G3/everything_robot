@@ -4,8 +4,6 @@
 
 #include <cmath>
 
-const int controller_frequency = 25;
-
 // TODO: use rosparam to set these
 const double b = 0.115; // distance from wheel to base
 const double r = 0.0352; // radius of the wheels
@@ -44,14 +42,10 @@ int main(int argc, char **argv)
   angular_velocity_right_pub = n.advertise<std_msgs::Float64>("/motor_name_right/angular_velocity", 1);
   ros::Subscriber twist_sub = n.subscribe("/cartesian_motor_controller/twist", 1, twistCallback);
 
-  ros::Rate loop_rate(controller_frequency);
-
   while (ros::ok())
   {
     // get most up-to-date encoder and twist readings, publishing is done inside the callback
-    ros::spinOnce();
-
-    loop_rate.sleep();
+    ros::spin();
   }
 
 

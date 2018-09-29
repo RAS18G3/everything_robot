@@ -32,6 +32,8 @@ private:
   nav_msgs::Odometry last_odometry_msg_;
 
   ros::Publisher odometry_pub_;
+
+  double yaw_;
 };
 
 #endif

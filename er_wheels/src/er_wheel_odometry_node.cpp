@@ -1,7 +1,7 @@
 #include "er_wheel_odometry_node.h"
 
 
-WheelOdometryNode::WheelOdometryNode() : ticks_per_rev_(3591.84/4), wheel_radius_(0.04), base_radius_(0.085) {
+WheelOdometryNode::WheelOdometryNode() : ticks_per_rev_(3591.84/4), wheel_radius_(0.049), base_radius_(0.085), yaw_(0) {
   angular_velocity_[MotorSide::Left] = 0;
   angular_velocity_[MotorSide::Right] = 0;
   // note messages are initialized with 0, so intiially the /base_frame will align with the /map frame
@@ -17,6 +17,7 @@ void WheelOdometryNode::run_node() {
   last_odometry_msg_.header.stamp = ros::Time::now();
   last_odometry_msg_.header.frame_id = "/map";
   last_odometry_msg_.child_frame_id = "/base_frame";
+  last_odometry_msg_.pose.pose.orientation.w = 1;
 
   odometry_pub_ = n.advertise<nav_msgs::Odometry>("/wheel_odometry", 1);
 
@@ -24,7 +25,7 @@ void WheelOdometryNode::run_node() {
   std::function<void(const phidgets::motor_encoder::ConstPtr&)> right_cb = std::bind(&WheelOdometryNode::encoder_callback, this, MotorSide::Right, std::placeholders::_1);
 
   ros::Subscriber encoder_sub_left = n.subscribe<phidgets::motor_encoder>("/motor_name_left/encoder", 1, left_cb);
-  ros::Subscriber encoder_sub_right = n.subscribe<phidgets::motor_encoder>("/motor_name_right/encoder", 1, right_cb);
+  ros::Subscriber encoder_sub_right = n.subscribe<phidgets::motor_encoder>("/motor_name/encoder", 1, right_cb);
 
   ros::Rate loop_rate(50);
 
@@ -60,35 +61,42 @@ void WheelOdometryNode::update_odometry() {
   odometry_msg.header.frame_id = "/map";
   odometry_msg.child_frame_id = "/base_frame";
   odometry_msg.header.stamp = ros::Time::now();
-  odometry_msg.twist.twist.angular.z = (angular_velocity_[MotorSide::Right] - angular_velocity_[MotorSide::Left]) * wheel_radius_ / base_radius_;
-  odometry_msg.twist.twist.linear.x = (angular_velocity_[MotorSide::Right] + angular_velocity_[MotorSide::Left]) / 2;
+  odometry_msg.twist.twist.angular.z = (angular_velocity_[MotorSide::Right] - angular_velocity_[MotorSide::Left]) * wheel_radius_ / ( 2 * base_radius_ );
+  odometry_msg.twist.twist.linear.x = (angular_velocity_[MotorSide::Right] + angular_velocity_[MotorSide::Left]) * wheel_radius_ / 2;
 
   // how much time has passed since the last last and current update
   const double dt = (odometry_msg.header.stamp - last_odometry_msg_.header.stamp).toSec();
 
   // since we dont know when exactly between the last and current the velocity has changed, we take the average of the two measurements
   const double v_avg = (odometry_msg.twist.twist.linear.x + last_odometry_msg_.twist.twist.linear.x) / 2;
-  const double omega_avg = (odometry_msg.twist.twist.linear.x + last_odometry_msg_.twist.twist.linear.x) / 2;
+  const double omega_avg = (odometry_msg.twist.twist.angular.z + last_odometry_msg_.twist.twist.angular.z) / 2;
   const double delta_omega = omega_avg * dt;
 
-  // TODO: any nicer way of doing that??
-  tf2::Quaternion relative_rotation;
-  relative_rotation.setRPY(0, 0, delta_omega);
-  tf2::Quaternion current_rotation;
-  tf2::fromMsg(last_odometry_msg_.pose.pose.orientation, current_rotation);
-  tf2::Quaternion new_rotation = (relative_rotation * current_rotation).normalize();
+  // TODO: any nicer way of doing that, using the old message is super annoying because of quaternions...?
+  yaw_ = yaw_ + delta_omega;
+  yaw_ = yaw_ >= 2 * M_PI ? yaw_ - 2 * M_PI : yaw_;
+  yaw_ = yaw_ < 0 ? yaw_ + 2 * M_PI : yaw_;
+  tf2::Quaternion new_rotation;
+  new_rotation.setRPY(0, 0, yaw_);
   odometry_msg.pose.pose.orientation = tf2::toMsg(new_rotation);
 
   // find radius and center of the circle trajectory that the robot has been following the past dt
   const double r = v_avg / omega_avg; // TODO: check for omega_avg == 0? required?
-  const double theta = new_rotation.getAngle();
-  const double icc_x = last_odometry_msg_.pose.pose.position.x - r * sin(theta);
-  const double icc_y = last_odometry_msg_.pose.pose.position.y + r * cos(theta);
+  const double icc_x = last_odometry_msg_.pose.pose.position.x - r * sin(yaw_);
+  const double icc_y = last_odometry_msg_.pose.pose.position.y + r * cos(yaw_);
   const double delta_x = last_odometry_msg_.pose.pose.position.x - icc_x;
   const double delta_y = last_odometry_msg_.pose.pose.position.y - icc_y;
 
-  odometry_msg.pose.pose.position.x = icc_x + cos(delta_omega) * delta_x - sin(delta_omega * delta_y);
-  odometry_msg.pose.pose.position.y = icc_y + sin(delta_omega) * delta_x + cos(delta_omega * delta_y);
+  ROS_INFO("delta_omega: %f", delta_omega);
+  ROS_INFO("delta_x: %f", delta_x);
+  ROS_INFO("delta_y: %f", delta_y);
+  ROS_INFO("r %f", r);
+  ROS_INFO("yaw %f", yaw_);
+  ROS_INFO("icc_x %f", icc_x);
+  ROS_INFO("icc_y %f", icc_y);
+
+  odometry_msg.pose.pose.position.x = icc_x + cos(delta_omega) * delta_x - sin(delta_omega) * delta_y;
+  odometry_msg.pose.pose.position.y = icc_y + sin(delta_omega) * delta_x + cos(delta_omega) * delta_y;
 
   last_odometry_msg_ = odometry_msg;
   odometry_pub_.publish(odometry_msg);

@@ -73,6 +73,7 @@ void WheelOdometryNode::update_odometry() {
   const double delta_omega = omega_avg * dt;
 
   // TODO: any nicer way of doing that, using the old message is super annoying because of quaternions...?
+  // make sure yaw_ is in [0,2pi)
   yaw_ = yaw_ + delta_omega;
   yaw_ = yaw_ >= 2 * M_PI ? yaw_ - 2 * M_PI : yaw_;
   yaw_ = yaw_ < 0 ? yaw_ + 2 * M_PI : yaw_;
@@ -81,6 +82,9 @@ void WheelOdometryNode::update_odometry() {
   odometry_msg.pose.pose.orientation = tf2::toMsg(new_rotation);
 
   // find radius and center of the circle trajectory that the robot has been following the past dt
+  // TODO: different formulas when omega_avg is very small -> infinite circle / driving in a straight line
+  if(omega_avg == 0)
+    return;
   const double r = v_avg / omega_avg; // TODO: check for omega_avg == 0? required?
   const double icc_x = last_odometry_msg_.pose.pose.position.x - r * sin(yaw_);
   const double icc_y = last_odometry_msg_.pose.pose.position.y + r * cos(yaw_);

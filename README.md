@@ -7,7 +7,8 @@ Assuming you have ROS Kinetic Kame up and running, do the following to get the r
 cd
 git clone https://github.com/KTH-RAS/ras_install.git
 cd ras_install/scripts
-./install.sh```
+./install.sh
+```
 
 At this point you should be able to run all the test commands from canvas.
 

@@ -16,8 +16,8 @@ ros::Publisher angular_velocity_right_pub;
 
 void twistCallback(const geometry_msgs::Twist::ConstPtr& twist_msg)
 {
-  double omega_left = (twist_msg->linear.x - b * twist_msg->angular.z)/wheel_circumference;
-  double omega_right = (twist_msg->linear.x + b * twist_msg->angular.z)/wheel_circumference;
+  double omega_left = (twist_msg->linear.x - b * twist_msg->angular.z)/r;
+  double omega_right = (twist_msg->linear.x + b * twist_msg->angular.z)/r;
 
   std_msgs::Float64 angular_velocity_left_msg;
   angular_velocity_left_msg.data = omega_left;

@@ -5,8 +5,8 @@
 #include <cmath>
 
 // TODO: use rosparam to set these
-const double b = 0.115; // distance from wheel to base
-const double r = 0.0352; // radius of the wheels
+const double b = 0.085; // distance from wheel to base
+const double r = 0.049; // radius of the wheels
 
 const double wheel_circumference = 2*M_PI*r;
 
@@ -38,9 +38,14 @@ int main(int argc, char **argv)
 
   ros::NodeHandle n;
 
-  angular_velocity_left_pub = n.advertise<std_msgs::Float64>("/motor_name_left/angular_velocity", 1);
-  angular_velocity_right_pub = n.advertise<std_msgs::Float64>("/motor_name_right/angular_velocity", 1);
-  ros::Subscriber twist_sub = n.subscribe("/cartesian_motor_controller/twist", 1, twistCallback);
+  std::string node_name = ros::this_node::getName();
+  std::string left_motor_name, right_motor_name;
+  n.param<std::string>("left_motor_name", left_motor_name, "left_motor");
+  n.param<std::string>("right_motor_name", right_motor_name, "right_motor");
+
+  angular_velocity_left_pub = n.advertise<std_msgs::Float64>(left_motor_name + "/angular_velocity", 1);
+  angular_velocity_right_pub = n.advertise<std_msgs::Float64>(right_motor_name + "/angular_velocity", 1);
+  ros::Subscriber twist_sub = n.subscribe(node_name + "/twist", 1, twistCallback);
 
   while (ros::ok())
   {

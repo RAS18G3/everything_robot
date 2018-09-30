@@ -52,9 +52,9 @@ int main(int argc, char **argv)
 
   ros::NodeHandle n;
 
-  ros::Publisher pwm_pub = n.advertise<std_msgs::Float32>("/motor_name/cmd_vel", 1);
-  ros::Subscriber angular_velocity_sub = n.subscribe("/motor_name/angular_velocity", 1, angularVelocityCallback);
-  ros::Subscriber encoder_sub = n.subscribe("/motor_name/encoder", 1, encoderCallback);
+  ros::Publisher pwm_pub = n.advertise<std_msgs::Float32>("cmd_vel", 1);
+  ros::Subscriber angular_velocity_sub = n.subscribe("angular_velocity", 1, angularVelocityCallback);
+  ros::Subscriber encoder_sub = n.subscribe("encoder", 1, encoderCallback);
 
   ros::Rate loop_rate(controller_frequency);
 

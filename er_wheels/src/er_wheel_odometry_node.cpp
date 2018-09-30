@@ -14,18 +14,23 @@ WheelOdometryNode::~WheelOdometryNode() {
 void WheelOdometryNode::run_node() {
   ros::NodeHandle n;
 
+  std::string node_name = ros::this_node::getName();
+  std::string left_motor_name, right_motor_name;
+  n.param<std::string>("left_motor_name", left_motor_name, "left_motor");
+  n.param<std::string>("right_motor_name", right_motor_name, "right_motor");
+
   last_odometry_msg_.header.stamp = ros::Time::now();
   last_odometry_msg_.header.frame_id = "/map";
   last_odometry_msg_.child_frame_id = "/base_frame";
   last_odometry_msg_.pose.pose.orientation.w = 1;
 
-  odometry_pub_ = n.advertise<nav_msgs::Odometry>("/wheel_odometry", 1);
+  odometry_pub_ = n.advertise<nav_msgs::Odometry>(node_name, 1);
 
   std::function<void(const phidgets::motor_encoder::ConstPtr&)> left_cb = std::bind(&WheelOdometryNode::encoder_callback, this, MotorSide::Left, std::placeholders::_1);
   std::function<void(const phidgets::motor_encoder::ConstPtr&)> right_cb = std::bind(&WheelOdometryNode::encoder_callback, this, MotorSide::Right, std::placeholders::_1);
 
-  ros::Subscriber encoder_sub_left = n.subscribe<phidgets::motor_encoder>("/motor_name_left/encoder", 1, left_cb);
-  ros::Subscriber encoder_sub_right = n.subscribe<phidgets::motor_encoder>("/motor_name/encoder", 1, right_cb);
+  ros::Subscriber encoder_sub_left = n.subscribe<phidgets::motor_encoder>(left_motor_name + "/encoder", 1, left_cb);
+  ros::Subscriber encoder_sub_right = n.subscribe<phidgets::motor_encoder>(right_motor_name + "/encoder", 1, right_cb);
 
   ros::Rate loop_rate(50);
 

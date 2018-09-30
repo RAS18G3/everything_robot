@@ -46,6 +46,29 @@ void encoderCallback(const phidgets::motor_encoder::ConstPtr& encoder_msg)
   }
 }
 
+void updatePID()
+{
+  double error = omega_goal - omega;
+
+  error_i += error / controller_frequency;
+
+  // cap i, s.t. final pwm signal is not outside of boundaries
+  // this will cap the pwm signial between -100 and 100 as well
+  // and prevents i to get very high for unreachable goals and thus
+  // taking time to get back up/down
+  if(p*error + i*error_i > 100)
+    error_i = (100 - p*error) / i;
+  else if(p*error + i*error_i < -100)
+      error_i = (-100 - p*error) / i;
+
+  ROS_DEBUG("error: %f", error);
+
+  std_msgs::Float32 pwm_msg;
+  pwm_msg.data = p*error + i*error_i;
+
+  pwm_pub.publish(pwm_msg);
+}
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "er_motor_controller_node");
@@ -63,25 +86,7 @@ int main(int argc, char **argv)
     // get most up-to-date encoder and twist readings
     ros::spinOnce();
 
-    double error = omega_goal - omega;
-
-    error_i += error / controller_frequency;
-
-    // cap i, s.t. final pwm signal is not outside of boundaries
-    // this will cap the pwm signial between -100 and 100 as well
-    // and prevents i to get very high for unreachable goals and thus
-    // taking time to get back up/down
-    if(p*error + i*error_i > 100)
-      error_i = (100 - p*error) / i;
-    else if(p*error + i*error_i < -100)
-        error_i = (-100 - p*error) / i;
-
-    ROS_DEBUG("error: %f", error);
-
-    std_msgs::Float32 pwm_msg;
-    pwm_msg.data = p*error + i*error_i;
-
-    pwm_pub.publish(pwm_msg);
+    updatePID();
 
     loop_rate.sleep();
   }

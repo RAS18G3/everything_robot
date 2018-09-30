@@ -58,8 +58,8 @@ void WheelOdometryNode::update_odometry() {
   nav_msgs::Odometry odometry_msg;
   const double wheel_circumference = 2*M_PI*wheel_radius_;
 
-  odometry_msg.header.frame_id = "/map";
-  odometry_msg.child_frame_id = "/base_frame";
+  odometry_msg.header.frame_id = "/odom";
+  odometry_msg.child_frame_id = "/base_link";
   odometry_msg.header.stamp = ros::Time::now();
   odometry_msg.twist.twist.angular.z = (angular_velocity_[MotorSide::Right] - angular_velocity_[MotorSide::Left]) * wheel_radius_ / ( 2 * base_radius_ );
   odometry_msg.twist.twist.linear.x = (angular_velocity_[MotorSide::Right] + angular_velocity_[MotorSide::Left]) * wheel_radius_ / 2;

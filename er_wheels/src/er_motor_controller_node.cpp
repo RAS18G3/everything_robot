@@ -27,6 +27,8 @@ ros::Publisher pwm_pub;
 ros::Subscriber angular_velocity_sub;
 ros::Subscriber encoder_sub;
 
+int invert_sign = 1; // will be set to -1 if motor must be inverted
+
 
 void angularVelocityCallback(const std_msgs::Float64::ConstPtr& angular_velocity_msg)
 {
@@ -44,7 +46,7 @@ void encoderCallback(const phidgets::motor_encoder::ConstPtr& encoder_msg)
   }
   else {
     double delta_t = (encoder_msg->header.stamp-last_encoder_reading_time).toSec();
-    omega = 2 * M_PI * (double)(encoder_msg->count - last_encoder_reading) / (delta_t * ticks_per_rev);
+    omega = invert_sign * 2 * M_PI * (double)(encoder_msg->count - last_encoder_reading) / (delta_t * ticks_per_rev);
     ROS_DEBUG("omega: [%f], T: [%f]", omega, 2*M_PI/omega);
     last_encoder_reading = encoder_msg->count;
     last_encoder_reading_time = encoder_msg->header.stamp;
@@ -64,12 +66,12 @@ void updatePID()
   if(p*error + i*error_i > 100)
     error_i = (100 - p*error) / i;
   else if(p*error + i*error_i < -100)
-      error_i = (-100 - p*error) / i;
+    error_i = (-100 - p*error) / i;
 
   ROS_DEBUG("error: %f", error);
 
   std_msgs::Float32 pwm_msg;
-  pwm_msg.data = p*error + i*error_i;
+  pwm_msg.data = invert_sign*(p*error + i*error_i);
 
   pwm_pub.publish(pwm_msg);
 }
@@ -79,6 +81,15 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "er_motor_controller_node");
 
   ros::NodeHandle n;
+
+  ROS_INFO("Init motor controller ... ");
+  bool invert_motor = false;
+  
+  ros::param::param<bool>("~invert_motor", invert_motor, false);
+  if (invert_motor) {
+    invert_sign = -1;
+    ROS_INFO("Motor inverted");
+  }
 
   pwm_pub = n.advertise<std_msgs::Float32>("cmd_vel", 1);
   angular_velocity_sub = n.subscribe("angular_velocity", 1, angularVelocityCallback);

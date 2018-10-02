@@ -25,6 +25,7 @@ private:
   std::map<enum MotorSide, double> angular_velocity_;
   std::map<enum MotorSide, double> last_encoder_reading_;
   std::map<enum MotorSide, ros::Time> last_encoder_reading_time_;
+  std::map<enum MotorSide, int> inverted_sign_;
 
   const double ticks_per_rev_;
   const double wheel_radius_;

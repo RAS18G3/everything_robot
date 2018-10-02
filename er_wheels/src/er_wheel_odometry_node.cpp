@@ -16,8 +16,15 @@ void WheelOdometryNode::run_node() {
 
   std::string node_name = ros::this_node::getName();
   std::string left_motor_name, right_motor_name;
-  n.param<std::string>("left_motor_name", left_motor_name, "left_motor");
-  n.param<std::string>("right_motor_name", right_motor_name, "right_motor");
+  bool left_inverted, right_inverted;
+  ros::param::param<std::string>("~left_motor_name", left_motor_name, "left_motor");
+  ros::param::param<std::string>("~right_motor_name", right_motor_name, "right_motor");
+  ros::param::param<bool>("~left_motor_invert", left_inverted, false);
+  ros::param::param<bool>("~right_motor_invert", right_inverted, false);
+  inverted_sign_[MotorSide::Left] = left_inverted ? -1 : 1;
+  inverted_sign_[MotorSide::Right] = right_inverted ? -1 : 1;
+
+  ROS_INFO("inverted left %d right %d", inverted_sign_[MotorSide::Left], inverted_sign_[MotorSide::Right]);
 
   last_odometry_msg_.header.stamp = ros::Time::now();
   last_odometry_msg_.header.frame_id = "/map";
@@ -51,7 +58,7 @@ void WheelOdometryNode::encoder_callback(const enum MotorSide motor_side, const 
   }
   else {
     double delta_t = (encoder_msg->header.stamp-last_encoder_reading_time_[motor_side]).toSec();
-    angular_velocity_[motor_side] = 2 * M_PI * (double)(encoder_msg->count - last_encoder_reading_[motor_side]) / (delta_t * ticks_per_rev_);
+    angular_velocity_[motor_side] = inverted_sign_[motor_side] * 2 * M_PI * (double)(encoder_msg->count - last_encoder_reading_[motor_side]) / (delta_t * ticks_per_rev_);
     last_encoder_reading_[motor_side] = encoder_msg->count;
     last_encoder_reading_time_[motor_side] = encoder_msg->header.stamp;
   }
@@ -96,13 +103,13 @@ void WheelOdometryNode::update_odometry() {
   const double delta_x = last_odometry_msg_.pose.pose.position.x - icc_x;
   const double delta_y = last_odometry_msg_.pose.pose.position.y - icc_y;
 
-  ROS_INFO("delta_omega: %f", delta_omega);
-  ROS_INFO("delta_x: %f", delta_x);
-  ROS_INFO("delta_y: %f", delta_y);
-  ROS_INFO("r %f", r);
-  ROS_INFO("yaw %f", yaw_);
-  ROS_INFO("icc_x %f", icc_x);
-  ROS_INFO("icc_y %f", icc_y);
+  ROS_DEBUG("delta_omega: %f", delta_omega);
+  ROS_DEBUG("delta_x: %f", delta_x);
+  ROS_DEBUG("delta_y: %f", delta_y);
+  ROS_DEBUG("r %f", r);
+  ROS_DEBUG("yaw %f", yaw_);
+  ROS_DEBUG("icc_x %f", icc_x);
+  ROS_DEBUG("icc_y %f", icc_y);
 
   odometry_msg.pose.pose.position.x = icc_x + cos(delta_omega) * delta_x - sin(delta_omega) * delta_y;
   odometry_msg.pose.pose.position.y = icc_y + sin(delta_omega) * delta_x + cos(delta_omega) * delta_y;

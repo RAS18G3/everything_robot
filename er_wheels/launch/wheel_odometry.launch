@@ -10,16 +10,22 @@
     <param name="serial" value="470088" />
   </node>
 
-  <node name="left_motor_controller" pkg="er_wheels" type="er_motor_controller_node" output="screen" ns="left_motor" />
-  <node name="right_motor_controller" pkg="er_wheels" type="er_motor_controller_node" output="screen" ns="right_motor" />
+  <node name="left_motor_controller" pkg="er_wheels" type="er_motor_controller_node" output="screen" ns="left_motor">
+    <param name="invert_motor" value="false" />
+  </node>
+  <node name="right_motor_controller" pkg="er_wheels" type="er_motor_controller_node" output="screen" ns="right_motor">
+    <param name="invert_motor" value="true" />
+  </node>
 
   <node name="cartesian_motor_controller" pkg="er_wheels" type="er_cartesian_motor_controller_node" output="screen">
     <param name="left_motor_name" value="left_motor" />
     <param name="right_motor_name" value="right_motor" />
   </node>
 
-  <node name="wheel_odometry" pkg="er_wheels" type="er_wheel_odometry_node">
+  <node name="wheel_odometry" pkg="er_wheels" type="er_wheel_odometry_node" output="screen">
     <param name="left_motor_name" value="left_motor" />
     <param name="right_motor_name" value="right_motor" />
+    <param name="left_motor_invert" value="false" />
+    <param name="right_motor_invert" value="true" />
   </node>
 </launch>

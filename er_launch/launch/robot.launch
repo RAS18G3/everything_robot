@@ -33,4 +33,6 @@
     <param name="left_motor_invert" value="false" />
     <param name="right_motor_invert" value="true" />
   </node>
+
+  <include file="$(find rplidar_ros)/launch/rplidar.launch" />
 </launch>

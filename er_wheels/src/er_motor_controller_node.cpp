@@ -23,6 +23,11 @@ double error_i = 0;
 int last_encoder_reading = -1;
 ros::Time last_encoder_reading_time;
 
+ros::Publisher pwm_pub;
+ros::Subscriber angular_velocity_sub;
+ros::Subscriber encoder_sub;
+
+
 void angularVelocityCallback(const std_msgs::Float64::ConstPtr& angular_velocity_msg)
 {
   omega_goal = angular_velocity_msg->data;
@@ -75,9 +80,9 @@ int main(int argc, char **argv)
 
   ros::NodeHandle n;
 
-  ros::Publisher pwm_pub = n.advertise<std_msgs::Float32>("/motor_name/cmd_vel", 1);
-  ros::Subscriber angular_velocity_sub = n.subscribe("/motor_name/angular_velocity", 1, angularVelocityCallback);
-  ros::Subscriber encoder_sub = n.subscribe("/motor_name/encoder", 1, encoderCallback);
+  pwm_pub = n.advertise<std_msgs::Float32>("/motor_name/cmd_vel", 1);
+  angular_velocity_sub = n.subscribe("/motor_name/angular_velocity", 1, angularVelocityCallback);
+  encoder_sub = n.subscribe("/motor_name/encoder", 1, encoderCallback);
 
   ros::Rate loop_rate(controller_frequency);
 

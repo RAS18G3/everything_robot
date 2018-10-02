@@ -27,8 +27,8 @@ void WheelOdometryNode::run_node() {
   ROS_INFO("inverted left %d right %d", inverted_sign_[MotorSide::Left], inverted_sign_[MotorSide::Right]);
 
   last_odometry_msg_.header.stamp = ros::Time::now();
-  last_odometry_msg_.header.frame_id = "/map";
-  last_odometry_msg_.child_frame_id = "/base_frame";
+  last_odometry_msg_.header.frame_id = "odom";
+  last_odometry_msg_.child_frame_id = "base_frame";
   last_odometry_msg_.pose.pose.orientation.w = 1;
 
   odometry_pub_ = n.advertise<nav_msgs::Odometry>(node_name, 1);
@@ -70,8 +70,8 @@ void WheelOdometryNode::update_odometry() {
   nav_msgs::Odometry odometry_msg;
   const double wheel_circumference = 2*M_PI*wheel_radius_;
 
-  odometry_msg.header.frame_id = "/map";
-  odometry_msg.child_frame_id = "/base_frame";
+  odometry_msg.header.frame_id = "odom";
+  odometry_msg.child_frame_id = "base_frame";
   odometry_msg.header.stamp = ros::Time::now();
   odometry_msg.twist.twist.angular.z = (angular_velocity_[MotorSide::Right] - angular_velocity_[MotorSide::Left]) * wheel_radius_ / ( 2 * base_radius_ );
   odometry_msg.twist.twist.linear.x = (angular_velocity_[MotorSide::Right] + angular_velocity_[MotorSide::Left]) * wheel_radius_ / 2;
@@ -116,6 +116,18 @@ void WheelOdometryNode::update_odometry() {
 
   last_odometry_msg_ = odometry_msg;
   odometry_pub_.publish(odometry_msg);
+
+
+  geometry_msgs::TransformStamped transform_stamped;
+
+  transform_stamped.header.stamp = ros::Time::now();
+  transform_stamped.header.frame_id = "odom";
+  transform_stamped.child_frame_id = "base_link";
+  transform_stamped.transform.translation.x = odometry_msg.pose.pose.position.x;
+  transform_stamped.transform.translation.y = odometry_msg.pose.pose.position.y;
+  transform_stamped.transform.rotation = odometry_msg.pose.pose.orientation;
+
+  transform_broadcaster_.sendTransform(transform_stamped);
 }
 
 int main(int argc, char **argv)

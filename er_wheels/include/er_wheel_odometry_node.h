@@ -6,6 +6,8 @@
 #include "phidgets/motor_encoder.h"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "tf2_ros/transform_broadcaster.h"
+#include "geometry_msgs/TransformStamped.h"
 
 #include <cmath>
 #include <functional>
@@ -33,6 +35,7 @@ private:
   nav_msgs::Odometry last_odometry_msg_;
 
   ros::Publisher odometry_pub_;
+  tf2_ros::TransformBroadcaster transform_broadcaster_;
 
   double yaw_;
 };

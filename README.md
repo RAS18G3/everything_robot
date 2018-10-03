@@ -14,7 +14,7 @@ At this point you should be able to run all the test commands from canvas.
 
 Clone and compile this repository using:
 ```console
-cd ~/catkin_ws
+cd ~/catkin_ws/src
 git clone https://github.com/RAS18G3/everything_robot.git
 catkin_make
 ```

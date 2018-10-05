@@ -46,6 +46,9 @@ void WheelOdometryNode::run_node() {
     // get most up-to-date encoder and twist readings
     ros::spinOnce();
 
+    // publish transform (this has to be done even if the callback is not called, so that the transform stays up-to-date)
+    publish_transform();
+
     loop_rate.sleep();
 
   }
@@ -116,16 +119,18 @@ void WheelOdometryNode::update_odometry() {
 
   last_odometry_msg_ = odometry_msg;
   odometry_pub_.publish(odometry_msg);
+}
 
-
+void WheelOdometryNode::publish_transform()
+{
   geometry_msgs::TransformStamped transform_stamped;
 
   transform_stamped.header.stamp = ros::Time::now();
   transform_stamped.header.frame_id = "odom";
   transform_stamped.child_frame_id = "base_link";
-  transform_stamped.transform.translation.x = odometry_msg.pose.pose.position.x;
-  transform_stamped.transform.translation.y = odometry_msg.pose.pose.position.y;
-  transform_stamped.transform.rotation = odometry_msg.pose.pose.orientation;
+  transform_stamped.transform.translation.x = last_odometry_msg_.pose.pose.position.x;
+  transform_stamped.transform.translation.y = last_odometry_msg_.pose.pose.position.y;
+  transform_stamped.transform.rotation = last_odometry_msg_.pose.pose.orientation;
 
   transform_broadcaster_.sendTransform(transform_stamped);
 }

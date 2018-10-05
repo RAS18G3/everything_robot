@@ -13,8 +13,8 @@ class KeyboardNode:
         self.ang_vel = 0
         self.v = 0
 
-        self.pub = rospy.Publisher('cartesian_motor_controller/Twist', Twist, queue_size=10)
-        rospy.init_node('talker', anonymous=True)
+        self.pub = rospy.Publisher('cartesian_motor_controller/twist', Twist, queue_size=10)
+        rospy.init_node('keyboard_node', anonymous=True)
         rate = rospy.Rate(10) # 10hz
 
         with keyboard.Listener(on_press=lambda key: self.on_press(key), on_release=lambda key: self.on_release(key)) as listener:
@@ -39,17 +39,20 @@ class KeyboardNode:
             pass
 
     def on_release(self,key):
-        print('{0} released'.format(key))
-        if key.char == 'w':
-            self.v = 0
-        elif key.char == 'a':
-            self.ang_vel = 0
-        elif key.char == 'd':
-            self.ang_vel = 0
-        elif key.char == 's':
-            self.v = 0
+        try:
+            print('{0} released'.format(key))
+            if key.char == 'w':
+                self.v = 0
+            elif key.char == 'a':
+                self.ang_vel = 0
+            elif key.char == 'd':
+                self.ang_vel = 0
+            elif key.char == 's':
+                self.v = 0
 
-        self.publish()
+            self.publish()
+        except AttributeError:
+            pass
 
     def publish(self):
         twist_msg = Twist()

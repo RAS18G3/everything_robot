@@ -45,9 +45,10 @@ int main(int argc, char **argv)
   while (ros::ok())
   {
     // get most up-to-date encoder and twist readings, publishing is done inside the callback
-    ros::spin();
+    ros::spinOnce();
+    // use either spin() or spinOnce() - and we already have a whileloop
+    // spin() is basically same as while( node::ok() ){ ros::spinOnce(); }
   }
-
 
   return 0;
 }

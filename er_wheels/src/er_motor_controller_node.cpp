@@ -48,6 +48,8 @@ void encoderCallback(const phidgets::motor_encoder::ConstPtr& encoder_msg)
     ROS_DEBUG("omega: [%f], T: [%f]", omega, 2*M_PI/omega);
     last_encoder_reading = encoder_msg->count;
     last_encoder_reading_time = encoder_msg->header.stamp;
+
+    updatePID();
   }
 }
 
@@ -90,10 +92,7 @@ int main(int argc, char **argv)
   {
     // get most up-to-date encoder and twist readings
     ros::spinOnce();
-
-    updatePID();
-
-    loop_rate.sleep();
+    loop_rate.sleep(); // what is the point of this?
   }
 
 

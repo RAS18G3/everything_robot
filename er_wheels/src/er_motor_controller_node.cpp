@@ -36,8 +36,6 @@ void angularVelocityCallback(const std_msgs::Float64::ConstPtr& angular_velocity
 
 void encoderCallback(const phidgets::motor_encoder::ConstPtr& encoder_msg)
 {
-  // it does not seem to be possible to set the publishing frequency of the motor
-  // so we decrease the rate by having this callback being called at a slower rate than the motor publishing
   if (last_encoder_reading == -1) {
     last_encoder_reading = encoder_msg->count;
     last_encoder_reading_time = encoder_msg->header.stamp;
@@ -92,7 +90,10 @@ int main(int argc, char **argv)
   {
     // get most up-to-date encoder and twist readings
     ros::spinOnce();
-    loop_rate.sleep(); // what is the point of this?
+    // it does not seem to be possible to set the publishing frequency of the motor
+    // so we decrease the rate by having this callback being called at a slower rate than the motor publishing
+
+    loop_rate.sleep(); 
   }
 
 

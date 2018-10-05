@@ -24,6 +24,7 @@ public:
 private:
   enum MotorSide {Left, Right};
   void encoder_callback(const enum MotorSide motor_side, const phidgets::motor_encoder::ConstPtr& encoder_msg);
+  void publish_transform();
   std::map<enum MotorSide, double> angular_velocity_;
   std::map<enum MotorSide, double> last_encoder_reading_;
   std::map<enum MotorSide, ros::Time> last_encoder_reading_time_;

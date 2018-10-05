@@ -26,9 +26,9 @@ class KeyboardNode:
             if key.char == 'w':
                 self.v = self.speed
             elif key.char == 'a':
-                self.ang_vel = self.speed
+                self.ang_vel = self.speed*3
             elif key.char == 'd':
-                self.ang_vel = -self.speed
+                self.ang_vel = -self.speed*3
             elif key.char == 's':
                 self.v = -self.speed
             elif key.char == 'q' or key == keyboard.Key.esc:

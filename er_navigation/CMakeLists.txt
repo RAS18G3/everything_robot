@@ -17,7 +17,7 @@ include_directories(
   include ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(er_slam_node src/er_slam_node.cpp src/map_reader.cpp)
+add_executable(er_slam_node src/er_slam_node.cpp src/map_reader.cpp src/occupancy_grid_utils.cpp)
 
 add_dependencies(er_slam_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 

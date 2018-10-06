@@ -42,5 +42,9 @@ MapReader::~MapReader() {
 nav_msgs::OccupancyGrid MapReader::occupancy_grid() const {
   nav_msgs::OccupancyGrid occupancy_grid_msg = nav_msgs::OccupancyGrid();
 
+  for(auto it = walls.begin(); it != walls.end(); ++it) {
+    bresenham_line(occupancy_grid_msg, it->x_start, it->x_end, it->y_start, it->y_end);
+  }
+
   return occupancy_grid_msg;
 }

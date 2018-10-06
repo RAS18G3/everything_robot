@@ -1,6 +1,8 @@
 #ifndef MAP_READER_H
 #define MAP_READER_H
 
+#include "occupancy_grid_utils.h"
+
 #include "ros/ros.h"
 #include "nav_msgs/OccupancyGrid.h"
 

@@ -52,6 +52,7 @@ ssh ras23@10.42.0.1
 - on the robot execute
 ```console
 roslaunch er_launch robot.launch
+```
 
 - to see messages and communicate over ROS you need to set some environment variables
 ```console

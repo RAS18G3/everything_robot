@@ -41,22 +41,29 @@ MapReader::~MapReader() {
 
 nav_msgs::OccupancyGrid MapReader::occupancy_grid() const {
   nav_msgs::OccupancyGrid occupancy_grid_msg = nav_msgs::OccupancyGrid();
+
+  // TODO: determine from wall values
   double width = 3.0;
   double height = 3.0;
   double resolution = 0.03;
+
+
+  double margin = 3.0;
   int8_t unknown_value = 5;
 
   occupancy_grid_msg.header.frame_id = "/map";
 
   occupancy_grid_msg.info.resolution = resolution;
-  occupancy_grid_msg.info.width = width/resolution;
-  occupancy_grid_msg.info.height = height/resolution;
+  occupancy_grid_msg.info.width = (width+2*margin)/resolution;
+  occupancy_grid_msg.info.height = (height+2*margin)/resolution;
 
+  occupancy_grid_msg.info.origin.position.x = -margin;
+  occupancy_grid_msg.info.origin.position.y = -margin;
 
   occupancy_grid_msg.data = std::vector<int8_t>(occupancy_grid_msg.info.width * occupancy_grid_msg.info.height, unknown_value);
 
   for(auto it = walls.begin(); it != walls.end(); ++it) {
-    bresenham_line(occupancy_grid_msg, it->x_start, it->x_end, it->y_start, it->y_end);
+    draw_line(occupancy_grid_msg, it->x_start+margin, it->x_end+margin, it->y_start+margin, it->y_end+margin);
   }
 
   return occupancy_grid_msg;

@@ -17,6 +17,7 @@ public:
   void run_node();
 
 private:
+  ros::NodeHandle nh_;
 };
 
 

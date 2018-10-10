@@ -42,13 +42,29 @@ MapReader::~MapReader() {
 nav_msgs::OccupancyGrid MapReader::occupancy_grid() const {
   nav_msgs::OccupancyGrid occupancy_grid_msg = nav_msgs::OccupancyGrid();
 
-  // TODO: determine from wall values
-  double width = 3.0;
-  double height = 3.0;
-  double resolution = 0.03;
+  double max_x = 0;
+  double max_y = 0;
+  for(auto it = walls.begin(); it != walls.end(); ++it) {
+    if(it->x_start > max_x) {
+      max_x = it->x_start;
+    }
+    if(it->x_end > max_x) {
+      max_x = it->x_end;
+    }
+    if(it->y_start > max_y) {
+      max_y = it->y_start;
+    }
+    if(it->y_end > max_y) {
+        max_y = it->y_end;
+    }
+  }
+
+  double width = max_x;
+  double height = max_y;
+  double resolution = 0.02;
 
 
-  double margin = 3.0;
+  double margin = 0.5;
   int8_t unknown_value = 5;
 
   occupancy_grid_msg.header.frame_id = "/map";

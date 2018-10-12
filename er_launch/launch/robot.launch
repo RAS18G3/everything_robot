@@ -2,6 +2,8 @@
 
   <node pkg="tf2_ros" type="static_transform_publisher" name="lidar_tf" args="0.03 0 0 3.1415 0 0 base_link laser" />
 
+  <node pkg="tf2_ros" type="static_transform_publisher" name="camera_tf" args="0.1 0 0.07 0 0.5 0 map camera_link" />
+
   <node pkg="tf2_ros" type="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 1 map odom" />
 
   <node name="left_motor" pkg="phidgets" type="motor" output="screen" >
@@ -42,5 +44,11 @@
 
   <node name="slam" pkg="er_navigation" type="er_slam_node" output="screen">
     <param name="map_file" value="$(find ras_maze_map)/maps/lab_maze_2018.txt" />
+  </node>
+
+  <node name="pointcloud_to_2d_node" pkg="er_perception" type="er_pointcloud_to_2d_node" output="screen">
+    <!-- note that the robots wheel axis will be at 0, thus if we position the camera correctly in 3d, ground will be negative (optimally at -wheel_radius)-->
+    <param name="min_height" value="-0.03" />
+    <param name="range" value="0.01" />
   </node>
 </launch>

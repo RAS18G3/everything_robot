@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>er_perception</name>
+  <version>0.0.1</version>
+  <description>This package handles the perception i.e. the camera of the robot.</description>
+
+  <author email="leonardb@kth.se">Leonard Bruns</author>
+  <author email="fradesjo@kth.se">Fanny Radesjö</author>
+  <author email="gupett@kth.se">Gustav Pettersson</author>
+  <author email="tomaszuk@kth.se">Michal Tomaszuk</author>
+
+  <maintainer email="leonardb@kth.se">Leonard Bruns</maintainer>
+  <maintainer email="fradesjo@kth.se">Fanny Radesjö</maintainer>
+  <maintainer email="gupett@kth.se">Gustav Pettersson</maintainer>
+  <maintainer email="tomaszuk@kth.se">Michal Tomaszuk</maintainer>
+
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>roscpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2</depend>
+  <depend>pcl_ros</depend>
+
+
+  <export>
+
+  </export>
+</package>

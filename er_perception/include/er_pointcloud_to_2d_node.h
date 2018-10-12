@@ -4,8 +4,13 @@
 #include "ros/ros.h"
 #include "pcl_ros/transforms.h"
 #include "tf2_ros/transform_listener.h"
+#include "pcl_ros/point_cloud.h"
+#include "pcl/point_types.h"
 
 #include <string>
+#include <cmath>
+
+typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 class PointCloudTo2DNode {
 public:
@@ -16,7 +21,7 @@ public:
 
 private:
   void init_node();
-  void pointcloud_cb(const sensor_msgs::PointCloud2::ConstPtr& msg);
+  void pointcloud_cb(const PointCloud::ConstPtr& msg);
 
   // the minimum height to use points
   double min_height_;

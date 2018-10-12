@@ -8,18 +8,27 @@ PointCloudTo2DNode::~PointCloudTo2DNode() {
 
 }
 
-void PointCloudTo2DNode::pointcloud_cb(const sensor_msgs::PointCloud2::ConstPtr& msg) {
-  ROS_INFO("Received pointcloud");
+void PointCloudTo2DNode::pointcloud_cb(const PointCloud::ConstPtr& msg) {
+  PointCloud transformed_pointcloud;
+  PointCloud modified_pointcloud;
 
-  sensor_msgs::PointCloud2 transformed_pointcloud;
+  // transform the point cloud such that ground is parallel to the floor
+  pcl_ros::transformPointCloud("/base_link", *msg, transformed_pointcloud, tf_listener_);
 
+  // remove all nan entrise (which correspond to now point), and threshold based on the defined height
+  for(auto it=transformed_pointcloud.begin(); it != transformed_pointcloud.end(); ++it) {
+    if(!std::isnan(it->x)) {
+      if(it-> z > min_height_ && it->z < min_height_+range_) {
+        it->z = 0;
+        modified_pointcloud.push_back(*it);
+      }
+    }
+  }
 
-
-  pcl_ros::transformPointCloud("/map", *msg, transformed_pointcloud, tf_listener_);
-  transformed_pointcloud.height = transformed_pointcloud.height * transformed_pointcloud.width;
-  transformed_pointcloud.width = 1;
-
-  pointcloud_publisher_.publish(transformed_pointcloud);
+  // set the reference frame
+  // this could also be map/odom, but this way no transform is required to get the distance from this points to the robot
+  modified_pointcloud.header.frame_id = "/base_link";
+  pointcloud_publisher_.publish(modified_pointcloud);
 }
 
 void PointCloudTo2DNode::init_node() {
@@ -31,8 +40,8 @@ void PointCloudTo2DNode::init_node() {
   ros::param::param<std::string>("~out_pointcloud_topic", out_pointcloud_topic, "/camera/pointcloud_2d");
 
 
-  pointcloud_subsriber_ = nh_.subscribe<sensor_msgs::PointCloud2>(camera_pointcloud_topic, 1, &PointCloudTo2DNode::pointcloud_cb, this);
-  pointcloud_publisher_ = nh_.advertise<sensor_msgs::PointCloud2>(out_pointcloud_topic, 1);
+  pointcloud_subsriber_ = nh_.subscribe<PointCloud>(camera_pointcloud_topic, 1, &PointCloudTo2DNode::pointcloud_cb, this);
+  pointcloud_publisher_ = nh_.advertise<PointCloud>(out_pointcloud_topic, 1);
 }
 
 void PointCloudTo2DNode::run_node() {

@@ -1,7 +1,7 @@
 #include "er_wheel_odometry_node.h"
 
 
-WheelOdometryNode::WheelOdometryNode() : ticks_per_rev_(3591.84/4), wheel_radius_(0.049), base_radius_(0.085), yaw_(0), loop_rate_(50) {
+WheelOdometryNode::WheelOdometryNode() : ticks_per_rev_(3591.84/4), wheel_radius_(0.049), base_radius_(0.09), yaw_(0), loop_rate_(50) {
   angular_velocity_[MotorSide::Left] = 0;
   angular_velocity_[MotorSide::Right] = 0;
   // note messages are initialized with 0, so intiially the /base_frame will align with the /map frame

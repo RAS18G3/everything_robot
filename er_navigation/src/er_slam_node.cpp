@@ -1,6 +1,6 @@
 #include "er_slam_node.h"
 
-SLAMNode::SLAMNode() : nh_() {
+SLAMNode::SLAMNode() : nh_(), loop_rate_(10) {
 
 }
 
@@ -8,20 +8,24 @@ SLAMNode::~SLAMNode() {
 
 }
 
-void SLAMNode::run_node() {
+void SLAMNode::init_node() {
   std::string map_path;
   ros::param::param<std::string>("~map_file", map_path, "");
 
   MapReader map_reader(map_path);
 
-  ros::Publisher map_publisher = nh_.advertise<nav_msgs::OccupancyGrid>("/occupancy_grid", 1);
+  map_publisher_ = nh_.advertise<nav_msgs::OccupancyGrid>("/occupancy_grid", 1);
 
-  ros::Rate loop_rate(10);
+  current_map_ = map_reader.occupancy_grid();
+}
+
+void SLAMNode::run_node() {
+  init_node();
 
   while(ros::ok()) {
-    map_publisher.publish(map_reader.occupancy_grid());
+    map_publisher_.publish(current_map_);
 
-    loop_rate.sleep();
+    loop_rate_.sleep();
   }
 }
 

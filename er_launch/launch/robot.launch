@@ -46,9 +46,10 @@
     <param name="map_file" value="$(find ras_maze_map)/maps/lab_maze_2018.txt" />
   </node>
 
+
   <node name="pointcloud_to_2d_node" pkg="er_perception" type="er_pointcloud_to_2d_node" output="screen">
     <!-- note that the robots wheel axis will be at 0, thus if we position the camera correctly in 3d, ground will be negative (optimally at -wheel_radius)-->
-    <param name="min_height" value="-0.03" />
-    <param name="range" value="0.01" />
+    <param name="min_height" value="-0.015" />
+    <param name="range" value="0.005" />
   </node>
 </launch>

@@ -36,11 +36,4 @@
 
   <include file="$(find rplidar_ros)/launch/rplidar.launch" />
 
-  <node name="maze_map_node" pkg="ras_maze_map" type="ras_maze_map_node" output="screen">
-    <param name="map_file" value="$(find ras_maze_map)/maps/lab_maze_2018.txt" />
-  </node>
-
-  <node name="slam" pkg="er_navigation" type="er_slam_node" output="screen">
-    <param name="map_file" value="$(find ras_maze_map)/maps/lab_maze_2018.txt" />
-  </node>
 </launch>

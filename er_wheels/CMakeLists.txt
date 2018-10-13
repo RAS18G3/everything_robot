@@ -25,9 +25,9 @@ add_executable(er_cartesian_motor_controller_node src/er_cartesian_motor_control
 add_executable(er_motor_controller_node src/er_motor_controller_node.cpp)
 add_executable(er_wheel_odometry_node src/er_wheel_odometry_node.cpp)
 
-add_dependencies(er_cartesian_motor_controller_node ${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(er_motor_controller_node ${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(er_wheel_odometry_node ${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(er_cartesian_motor_controller_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(er_motor_controller_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(er_wheel_odometry_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 
 target_link_libraries(er_cartesian_motor_controller_node ${catkin_LIBRARIES})

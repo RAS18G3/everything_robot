@@ -82,30 +82,25 @@ int main(int argc, char **argv)
       ROS_INFO("angle: %f", angle_to_point-odom_w);
       ROS_INFO("dist: %f", distance_goal);
 
-
-      if(distance_goal < 0.5){
-        //set angular velocity to reach end angle
-        ROS_INFO("else");
-
+      if(distance_goal < 0.1){
+        ROS_INFO("final destination %f", distance_goal);
         twist_msg.linear.x = 0;
         twist_msg.linear.y = 0;
         twist_msg.angular.z = 0;
       }
-      else if(std::abs(odom_w-angle_to_point) < 0.4 && distance_goal > 0.5){
-        ROS_INFO("going forward");
-        float alpha2 = 0.5;
-        //set velocity to reach point
-        twist_msg.linear.x = 0.2;
-        twist_msg.linear.y = 0;
-        twist_msg.angular.z = alpha2*(angle_to_point-odom_w);
-      }
-      else{
-        ROS_INFO("spinning");
-        //set an angular velocity to get right angle towards point
-        float alpha1 = 1;
+      else if(abs(angle_to_point-odom_w) < 0.3){
+        ROS_INFO("spinning %f", angle_to_point-odom);
         twist_msg.linear.x = 0;
         twist_msg.linear.y = 0;
-        twist_msg.angular.z = alpha1*(angle_to_point-odom_w);
+        twist_msg.angular.z = 0.2*(angle_to_point-odom_w);
+      }
+      else{
+        ROS_INFO("driving %f", distance_goal)
+        float horizon = 0.3;
+
+        twist_msg.linear.x = 0.2;
+        twist_msg.linear.y = 0;
+        twist_msg.angular.z = horizon*(angle_to_point-odom);
       }
     }
 

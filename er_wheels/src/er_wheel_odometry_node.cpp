@@ -127,7 +127,6 @@ void WheelOdometryNode::update_odometry() {
 
 
   last_odometry_msg_ = odometry_msg;
-  odometry_pub_.publish(odometry_msg);
 }
 
 void WheelOdometryNode::publish_transform()
@@ -142,6 +141,8 @@ void WheelOdometryNode::publish_transform()
   transform_stamped.transform.rotation = last_odometry_msg_.pose.pose.orientation;
 
   transform_broadcaster_.sendTransform(transform_stamped);
+
+  odometry_pub_.publish(last_odometry_msg_);
 }
 
 int main(int argc, char **argv)

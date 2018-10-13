@@ -17,7 +17,7 @@ add_compile_options(-std=c++11)
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS message_runtime roscpp std_msgs sensor_msgs pcl_ros tf2 rospy cv_bridge opencv2
+  CATKIN_DEPENDS message_runtime roscpp std_msgs sensor_msgs pcl_ros tf2
 )
 
 include_directories(
@@ -28,6 +28,8 @@ add_message_files(
   FILES
   object_location.msg
 )
+
+
 
 add_executable(er_pointcloud_to_2d_node src/er_pointcloud_to_2d_node.cpp)
 add_executable(er_obstacle_detection_node src/er_obstacle_detection_node.cpp)

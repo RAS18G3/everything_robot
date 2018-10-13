@@ -23,7 +23,4 @@ If you really want to test, do the following:
 6. Make sure the port in `gripper.launch` is correct for your case. I should make it autodetect instead
 6. `roslaunch er_gripper gripper.launch` - the servo should go from 0 to 180 in 5deg steps, then back
 
-
-# WIP
-ignore this, just some notes
-rosrun rosserial_python serial_node.py /dev/ttyUSB0
+Test at home with an HS-425BB servo went fine, worked as expected (after fixin a few things). It drew more current than the Arduino could supply though, but I know that we had some other servo at the lab. It probably consumes less power - the RASwiki example ran it directly from the board, after all.

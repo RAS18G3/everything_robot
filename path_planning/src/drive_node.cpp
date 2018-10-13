@@ -98,9 +98,9 @@ int main(int argc, char **argv)
         ROS_INFO("driving %f", distance_goal);
         float horizon = 0.3;
 
-        twist_msg.linear.x = 0.1;
+        twist_msg.linear.x = 0.2;
         twist_msg.linear.y = 0;
-        twist_msg.angular.z = 0.1*horizon*sin(angle_to_point-odom_w);
+        twist_msg.angular.z = (angle_to_point-odom_w);
       }
     }
 

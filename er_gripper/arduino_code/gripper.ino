@@ -31,7 +31,7 @@ void grip_callback( const std_msgs::Int64& angle_msg )
 // arduino/node setup
 
 ros::NodeHandle nh;
-ros::Subscriber<std_msgs::Int64> sub("servo", grip_callback);
+ros::Subscriber<std_msgs::Int64> sub("grip", grip_callback);
 
 void setup()
 {

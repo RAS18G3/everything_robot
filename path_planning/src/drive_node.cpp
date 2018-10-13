@@ -89,18 +89,18 @@ int main(int argc, char **argv)
         twist_msg.angular.z = 0;
       }
       else if(abs(angle_to_point-odom_w) < 0.3){
-        ROS_INFO("spinning %f", angle_to_point-odom);
+        ROS_INFO("spinning %f", angle_to_point-odom_w);
         twist_msg.linear.x = 0;
         twist_msg.linear.y = 0;
         twist_msg.angular.z = 0.2*(angle_to_point-odom_w);
       }
       else{
-        ROS_INFO("driving %f", distance_goal)
+        ROS_INFO("driving %f", distance_goal);
         float horizon = 0.3;
 
         twist_msg.linear.x = 0.2;
         twist_msg.linear.y = 0;
-        twist_msg.angular.z = horizon*(angle_to_point-odom);
+        twist_msg.angular.z = horizon*sin(angle_to_point-odom_w);
       }
     }
 

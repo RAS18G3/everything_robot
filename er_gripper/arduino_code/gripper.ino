@@ -8,62 +8,43 @@
 #include <ros.h>
 #include <std_msgs/Int64.h>
 
-ros::NodeHandle n;
-ros::Subscriber twist_sub = n.subscribe(node_name + "/twist", 1, twistCallback);
-Servo gripServo;  // create a servo object
 
-const int servoPin = 9;
-const int delayTime = 100;  // loop sleep time in ms
-const int angleBounds[2] = {0, 90}
+Servo grip_servo;  // create a servo object
 
-int targetAngle = 0; // variable to store target position for servos
+const int servo_pin = 9;
+const int sleep_time = 100;  // loop sleep time in ms
+const int angle_bounds[2] = {0, 90};
 
-void gripCallback( const std_msgs::Int64& angle_msg )
+int target_angle = angle_bounds[0]; // variable to store target position for servos
+
+void grip_callback( const std_msgs::Int64& angle_msg )
 {
-  int targetAngle = angle_msg.data;
+  int target_angle = angle_msg.data; // unpack msg
+
   // fix bounds
-  if(targetAngle < angleBounds[0])
-  {
-    targetAngle = angleBounds[0];
-  }
-  if(targetAngle > angleBounds[1])
-  {
-    targetAngle = angleBounds[1];
-  }
+  if(target_angle < angle_bounds[0]){ target_angle = angle_bounds[0]; }
+  if(target_angle > angle_bounds[1]){ target_angle = angle_bounds[1]; }
 
-  gripServo.write(pos);
+  grip_servo.write(target_angle); // write to servo
 }
 
+// arduino/node setup
 
-void setup() {
-  Serial.begin(9600); // initialize serial
-  gripServo.attach(servoPin);  // attaches the servo object to the given pin
-  gripServo.write(target_angles[0]); // initialize servo to 0deg
-}
-
-void loop() {
-  if (Serial.available() > 0) {
-    // read in new target values
-    read_targets();
-    // send them to the servos
-    servos[0].write(target_angles[0]);
-    servos[1].write(target_angles[1]);
-  }
-  delay(sleep_time);
-}
-
-
+ros::NodeHandle nh;
+ros::Subscriber<std_msgs::Int64> sub("servo", grip_callback);
 
 void setup()
 {
-  pinMode(13, OUTPUT);
   nh.initNode();
   nh.subscribe(sub);
-  gripServo.attach(9);  // attaches the servo on pin 9 to the servo object
+  grip_servo.attach(servo_pin);  // attaches the servo object to the given pin
+  grip_servo.write(angle_bounds[0]); // initialize servo to low bound
 }
 
+// arduino mainloop
+// has no intrinsic freq
 void loop()
 {
-  n.spinOnce();
-  delay(delayTime);
+  nh.spinOnce();
+  delay(sleep_time);
 }

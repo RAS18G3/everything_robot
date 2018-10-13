@@ -17,7 +17,13 @@ public:
   void run_node();
 
 private:
+  void init_node();
+
   ros::NodeHandle nh_;
+  ros::Publisher map_publisher_;
+  ros::Rate loop_rate_;
+
+  nav_msgs::OccupancyGrid current_map_;
 };
 
 

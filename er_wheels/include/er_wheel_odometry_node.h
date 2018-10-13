@@ -19,11 +19,12 @@ public:
   ~WheelOdometryNode();
 
   void run_node();
-  void update_odometry();
 
 private:
   enum MotorSide {Left, Right};
   void encoder_callback(const enum MotorSide motor_side, const phidgets::motor_encoder::ConstPtr& encoder_msg);
+  void init_node();
+  void update_odometry();
   void publish_transform();
   std::map<enum MotorSide, double> angular_velocity_;
   std::map<enum MotorSide, double> last_encoder_reading_;
@@ -35,8 +36,12 @@ private:
   const double base_radius_; // distance from center to wheel
   nav_msgs::Odometry last_odometry_msg_;
 
+  ros::NodeHandle nh_;
   ros::Publisher odometry_pub_;
+  ros::Subscriber encoder_sub_left_;
+  ros::Subscriber encoder_sub_right_;
   tf2_ros::TransformBroadcaster transform_broadcaster_;
+  ros::Rate loop_rate_;
 
   double yaw_;
 };

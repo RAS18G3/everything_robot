@@ -13,11 +13,12 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "er_gripper_node");
   ros::NodeHandle n;
-  ros::Rate loop_rate(5); // 5Hz should be slow enough for testing
+  grip_pub = n.advertise<std_msgs::Int64>("grip", 1);
 
   angle_msg.data = 0;
   int deg_delta = 5; // servo change each step
 
+  ros::Rate loop_rate(5); // 5Hz should be slow enough for testing
   while (ros::ok())
   {
     ros::spinOnce();

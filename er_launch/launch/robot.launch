@@ -61,7 +61,6 @@
     <param name="threshold" value="200" />
   </node>
 
-  <node name="er_simple_object_detector_node" pkg="er_perception" type="er_simple_object_detector_node.py" output="screen">
-  </node>
+
 
 </launch>

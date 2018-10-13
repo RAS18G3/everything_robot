@@ -7,8 +7,8 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   pcl_ros
   tf2
-  opencv2
-  cv_bridge
+#  opencv3
+#  cv_bridge
   rospy
   message_generation
 )

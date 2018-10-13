@@ -16,7 +16,7 @@ double omega_goal = 0;
 
 // use PI controller, since 25hz is probabaly to low to use d controller in a meaningful way
 double p = 0;
-double i = 10;
+double i = 20;
 
 double error_i = 0;
 
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
 
   ROS_INFO("Init motor controller ... ");
   bool invert_motor = false;
-  
+
   ros::param::param<bool>("~invert_motor", invert_motor, false);
   if (invert_motor) {
     invert_sign = -1;

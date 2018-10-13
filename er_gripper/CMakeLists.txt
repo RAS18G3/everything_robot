@@ -9,7 +9,6 @@ find_package(catkin REQUIRED COMPONENTS
 add_compile_options(-std=c++11)
 
 catkin_package(
-  INCLUDE_DIRS include
   CATKIN_DEPENDS roscpp std_msgs
 )
 
@@ -17,8 +16,8 @@ include_directories(
   include ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(src/gripper_node.cpp)
+add_executable(er_gripper_node src/er_gripper_node.cpp)
 
-add_dependencies(er_gripper ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(er_gripper_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(er_gripper ${catkin_LIBRARIES})
+target_link_libraries(er_gripper_node ${catkin_LIBRARIES})

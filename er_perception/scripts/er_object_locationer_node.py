@@ -103,7 +103,7 @@ def detect_objects(masked_imgs):
     return objects
 
 
-class simple_object_detector_node:
+class object_locationer_node:
     """docstring for listener"""
 
     def __init__(self):
@@ -112,18 +112,10 @@ class simple_object_detector_node:
         # anonymous=True flag means that rospy will choose a unique
         # name for our 'listener' node so that multiple listeners can
         # run simultaneously.
-        rospy.init_node('er_simple_object_detector_node', anonymous=True)
+        rospy.init_node('object_locationer_node', anonymous=True)
 
-        # Change to publish bounding boxes
-        self.image_pub = rospy.Publisher("object_location", Image)
-
-        # Needed to convert Image message to cv2 image type
-        self.bridge = CvBridge()
-
-        # Subscriber listening for the images sent by the camera, and set the callback function
-        #self.image_sub = rospy.Subscriber('camera/rgb/image_rect_color', Image, self.detect_object)
-
-        self.image_sub = rospy.Subscriber('camera/rgb/image_rect_color', Image, self.callback)
+        # Listen to the object location topic to get the bounding box of the objects
+        self.image_sub = rospy.Subscriber('object_location', Image, self.callback)
 
     def run(self):
         # spin() simply keeps python from exiting until this node is stopped
@@ -134,32 +126,7 @@ class simple_object_detector_node:
         print('I am receiving data!')
 
     def detect_object(self, data):
-        try:
-            cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-        except CvBridgeError as e:
-            print('wrong when converting message to cv2 image')
-            print(e)
-
-        # Apply smoothing to the image
-        img = cv2.medianBlur(cv_image, 9)
-
-        # Convert to hsv color space for better illumination robustness
-        hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
-        # Get a list of all the masked images
-        masked_images = mask_image_for_colors(hsv_img)
-
-        # Try and detect the objects from the masked images
-        objects = detect_objects(masked_images)
-
-        boxes = []
-        for object in objects:
-            box = cv2.boundingRect(object)
-            boxes.append(box)
-
-        l = len(boxes)
-        print('Found {} object/s in the image'.format(l))
-        # Should publish the boxes
+        print('hej')
 
 if __name__ == '__main__':
     li = simple_object_detector_node()

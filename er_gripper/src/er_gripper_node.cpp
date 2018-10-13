@@ -16,12 +16,17 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(5); // 5Hz should be slow enough for testing
 
   angle_msg.data = 0;
+  int deg_delta = 5; // servo change each step
 
   while (ros::ok())
   {
     ros::spinOnce();
 
-    angle_msg.data += 5;
+    // respect the bounds and "bounce" around them...
+    if(angle_msg.data > 90){ deg_delta = -5; }
+    if(angle_msg.data < 0){ deg_delta = 5; }
+
+    angle_msg.data += deg_delta;
     grip_pub.publish(angle_msg);
 
     loop_rate.sleep();

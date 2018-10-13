@@ -3,6 +3,7 @@ project(er_perception)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  std_msgs
   sensor_msgs
   pcl_ros
   tf2
@@ -12,7 +13,7 @@ add_compile_options(-std=c++11)
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp sensor_msgs pcl_ros tf2
+  CATKIN_DEPENDS roscpp std_msgs sensor_msgs pcl_ros tf2
 )
 
 include_directories(
@@ -20,7 +21,10 @@ include_directories(
 )
 
 add_executable(er_pointcloud_to_2d_node src/er_pointcloud_to_2d_node.cpp)
+add_executable(er_obstacle_detection_node src/er_obstacle_detection_node.cpp)
 
 add_dependencies(er_pointcloud_to_2d_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(er_obstacle_detection_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(er_pointcloud_to_2d_node ${catkin_LIBRARIES})
+target_link_libraries(er_obstacle_detection_node ${catkin_LIBRARIES})

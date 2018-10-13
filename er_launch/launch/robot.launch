@@ -53,4 +53,11 @@
     <param name="min_height" value="-0.015" />
     <param name="range" value="0.005" />
   </node>
+
+
+  <node name="obstacle_detection_node" pkg="er_perception" type="er_obstacle_detection_node" output="screen">
+    <!-- note that the robots wheel axis will be at 0, thus if we position the camera correctly in 3d, ground will be negative (optimally at -wheel_radius)-->
+    <param name="range" value="0.2" />
+    <param name="threshold" value="200" />
+  </node>
 </launch>

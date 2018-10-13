@@ -3,7 +3,7 @@
 #include "nav_msgs/Odometry.h"
 #include "nav_msgs/Path.h"
 #include "std_msgs/Bool.h"
-#include "math.h"
+#include <cmath>
 #include "tf/transform_listener.h"
 
 float odom_x;
@@ -15,13 +15,6 @@ float goal_y;
 float goal_w;
 bool stop;
 
-
-float abs(float a){
-  if(a < 0){
-    a = -a;
-  }
-  return a;
-}
 
 void path_callback(const nav_msgs::Odometry::ConstPtr path_msg){
   float qyy = path_msg -> pose.pose.orientation.y;
@@ -63,7 +56,7 @@ int main(int argc, char **argv)
 
   //add subscription that makes stop = true if an obstacle
 
-  ros::Rate loop_rate(10);
+  ros::Rate loop_rate(25);
   while(ros::ok()){
     geometry_msgs::Twist twist_msg;
 
@@ -83,38 +76,44 @@ int main(int argc, char **argv)
       twist_msg.angular.z = 0;
     }
     else{
-    float angle_to_point = atan((goal_x-odom_x)/(goal_y-odom_y));
-    ROS_INFO("diff %f", abs(goal_w-angle_to_point));
 
-    if(abs(odom_w-angle_to_point)> 0.001){
-      //set an angular velocity to get right angle towards point
-      float alpha1 = 1;
+      float angle_to_point = atan((goal_x-odom_x)/(goal_y-odom_y));
+      float distance_goal = sqrt(pow((goal_x-odom_x),2)+pow((goal_y-odom_y),2));
+      ROS_INFO("angle: %f", angle_to_point-odom_w);
+      ROS_INFO("dist: %f", distance_goal);
 
-      twist_msg.linear.x = 0;
-      twist_msg.linear.y = 0;
-      twist_msg.angular.z = alpha1*(odom_w-angle_to_point);
-    }
-    else if(abs(goal_w-angle_to_point) < 0.001 && (sqrt(pow((goal_x-odom_x),2)+pow((goal_y-odom_y),2))) > 0.1){
-      float alpha2 = 1;
-      //set velocity to reach point
-      twist_msg.linear.x = alpha2*(sqrt(pow((goal_x-odom_x),2)+pow((goal_y-odom_y),2)));
-      twist_msg.linear.y = 0;
-      twist_msg.angular.z = 0;
-    }
-    else{
-      //set angular velocity to reach end angle
-      float alpha3 = 1;
 
-      twist_msg.linear.x = 0;
-      twist_msg.linear.y = 0;
-      twist_msg.angular.z = alpha3*(odom_w-goal_w);
+      if(distance_goal < 0.5){
+        //set angular velocity to reach end angle
+        ROS_INFO("else");
+
+        twist_msg.linear.x = 0;
+        twist_msg.linear.y = 0;
+        twist_msg.angular.z = 0;
+      }
+      else if(std::abs(odom_w-angle_to_point) < 0.4 && distance_goal > 0.5){
+        ROS_INFO("going forward");
+        float alpha2 = 0.5;
+        //set velocity to reach point
+        twist_msg.linear.x = 0.2;
+        twist_msg.linear.y = 0;
+        twist_msg.angular.z = alpha2*(angle_to_point-odom_w);
+      }
+      else{
+        ROS_INFO("spinning");
+        //set an angular velocity to get right angle towards point
+        float alpha1 = 1;
+        twist_msg.linear.x = 0;
+        twist_msg.linear.y = 0;
+        twist_msg.angular.z = alpha1*(angle_to_point-odom_w);
+      }
     }
-  }
 
     //publish the twist
     twist_pub.publish(twist_msg);
 
     ros::spinOnce();
+
     loop_rate.sleep();
   }
 }

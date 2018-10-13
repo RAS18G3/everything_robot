@@ -22,7 +22,7 @@ catkin_make
 
 - Turn on the NUC on the robot
 
-- After a while robot_group3 wifi network should appear, connect to it
+- After a while robot_group3 wifi network should appear, connect to it (password is abc12345)
 
 - Connect via SSH to the robot via (password is ras2018)
 ```console

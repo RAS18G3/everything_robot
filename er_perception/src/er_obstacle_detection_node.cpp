@@ -24,7 +24,7 @@ void ObstacleDetectionNode::pointcloud_cb(const PointCloud::ConstPtr& msg) {
   bool_msg.data = in_radius_count >= threshold_ ? true : false;
   obstacle_publisher_.publish(bool_msg);
 
-  ROS_INFO("inliers: %d", in_radius_count);
+  ROS_DEBUG("inliers: %d", in_radius_count);
 }
 
 void ObstacleDetectionNode::init_node() {

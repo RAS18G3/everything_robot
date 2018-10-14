@@ -10,7 +10,8 @@ from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 
 '''
-Do not forget to source worskpace every time opening a new terminal
+Do not forget to source worskpace e
+very time opening a new terminal
 source ./delev/setup.bash
 Do not forget to make python file executable everytime creating a new pyhon node
 chmod +x file_name.py
@@ -32,6 +33,7 @@ RED_ORANGE_MAX_HIGH = np.array([179, 255, 255],np.uint8)
 # RED AND ORANGE
 RED_MIN = np.array([0, 150, 180],np.uint8)
 RED_MAX = np.array([5, 255, 255],np.uint8)
+
 
 # RED AND ORANGE
 ORANGE_MIN = np.array([7, 150, 180],np.uint8)

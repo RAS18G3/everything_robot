@@ -66,9 +66,10 @@ class image_recorder(object):
         print(frame[:,:,0])
         print('should be storingt img')
         #img_name = 'img/training_img' + str(self.counter) + '.png'
-        #cv2.imshow(img_name, frame)
+
         #cv2.imwrite(os.path.join(os.getcwd(), img_name), frame)
         cv2.imwrite('img/image_' + str(self.counter) + '.jpeg', frame)
+        #cv2.imshow('frame', frame)
         #cv2.waitKey(1)
 
         #cv2.imwrite(img_name, frame)

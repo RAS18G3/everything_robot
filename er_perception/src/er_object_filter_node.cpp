@@ -1,6 +1,6 @@
 #include "er_object_filter_node.h"
 
-ObjectFilterNode::ObjectFilterNode() : nh_(), loop_rate_(10), last_3d_pointcloud_msg_(nullptr) {
+ObjectFilterNode::ObjectFilterNode() : nh_(),  last_3d_pointcloud_msg_(nullptr), loop_rate_(10) {
 
 }
 
@@ -23,6 +23,7 @@ void ObjectFilterNode::pointcloud_3d_cb(const PointCloud::ConstPtr& msg) {
 
 void ObjectFilterNode::boundingbox_cb(const std_msgs::UInt16MultiArray::ConstPtr& msg) {
   int count=0;
+  ROS_DEBUG("received bounding boxes");
   center_points_.clear();
   int x, y, width, height;
   for(auto it = msg->data.begin(); it != msg->data.end(); ++it) {
@@ -39,12 +40,13 @@ void ObjectFilterNode::boundingbox_cb(const std_msgs::UInt16MultiArray::ConstPtr
       case 3:
         height = *it;
         center_points_.emplace_back(x+width/2, y+height/2);
+        ROS_DEBUG("add point");
         break;
       default:
         ROS_ERROR("this should not happen.");
         break;
     }
-    count = (count++)%4;
+    count = (++count)%4;
   }
 }
 
@@ -66,8 +68,14 @@ void ObjectFilterNode::process_data() {
   if(points_in_camera_ > threshold_ && last_3d_pointcloud_msg_ != nullptr) {
     // PointCloud transformed_pointcloud;
     // pcl_ros::transformPointCloud("/base_link", *msg, last_3last_3d_pointcloud_msg_, tf_listener_);
+    ROS_DEBUG("process object centers");
     for(auto point_it=center_points_.begin(); point_it!=center_points_.end(); ++point_it) {
-      ROS_INFO("%d %d -> %f %f %f", point_it->x, point_it->y, (*last_3d_pointcloud_msg_)[point_it->y * 640 + point_it->x].x,  (*last_3d_pointcloud_msg_)[point_it->y * 640 + point_it->x].y,  (*last_3d_pointcloud_msg_)[point_it->y * 640 + point_it->x].z);
+      double x = (*last_3d_pointcloud_msg_)[point_it->y * 640 + point_it->x].x;
+      double y = (*last_3d_pointcloud_msg_)[point_it->y * 640 + point_it->x].y;
+      double z = (*last_3d_pointcloud_msg_)[point_it->y * 640 + point_it->x].z;
+      if(!std::isnan(x)) {
+        ROS_INFO("%d %d -> %f %f %f", point_it->x, point_it->y, x, y, z);
+      }
     }
   }
 }
@@ -81,6 +89,8 @@ void ObjectFilterNode::run_node() {
 
     // fuse data
     process_data();
+
+    loop_rate_.sleep();
   }
 }
 

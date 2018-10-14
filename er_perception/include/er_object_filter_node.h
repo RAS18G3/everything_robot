@@ -42,13 +42,13 @@ private:
 
   int points_in_camera_;
 
-  ros::Rate loop_rate_;
-
   ros::NodeHandle nh_;
   ros::Subscriber pointcloud_2d_subscriber_;
   ros::Subscriber pointcloud_3d_subscriber_;
   ros::Subscriber boundingbox_subscriber_;
   tf::TransformListener tf_listener_;
+
+  ros::Rate loop_rate_;
 
   std::vector<Point2D> center_points_;
 };

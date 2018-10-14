@@ -64,6 +64,113 @@ def resize(image, width = None, height = None, inter = cv2.INTER_AREA):
     resized = cv2.resize(image, dim, interpolation=inter)
     return resized
 
+def overlapping_boxes(box1, box2):
+    # delta overlap is for detection boxes very close to each other so that they can be merged in to one
+    delta_overlap = 5
+
+    x1, y1, w1, h1 = box1
+    x2, y2, w2, h2 = box2
+
+    overlap_x = False
+    overlap_y = False
+
+    # Check if the x values of the boxes overlap
+    if x1 - delta_overlap < x2 < (x1 + w1 + delta_overlap):
+        overlap_x = True
+    elif x1 - delta_overlap < (x2 + w2) < (x1 + w1 + delta_overlap):
+        overlap_x = True
+    elif x2 - delta_overlap < x1 < (x2 + w2 + delta_overlap):
+        overlap_x = True
+
+    # Check if the y values of the boxes overlap
+    if y1 - delta_overlap < y2 < (y1 + h1 + delta_overlap):
+        overlap_y = True
+    elif y1 - delta_overlap < (y2 + h2) < (y1 + h1 + delta_overlap):
+        overlap_y = True
+    elif y2 - delta_overlap < y1 < (y2 + h2 + delta_overlap):
+        overlap_y = True
+
+    # if both the x and y values overlap the boxes are overlapping
+    if overlap_x and overlap_y:
+        return True
+    else:
+        return False
+
+
+def box_merge(box1, box2):
+    x1, y1, w1, h1 = box1
+    x2, y2, w2, h2 = box2
+
+    x = min(x1, x2)
+    y = min(y1, y2)
+
+    x_max = max(x1 + w1, x2 + w2)
+    y_max = max(y1 + h1, y2 + h2)
+
+    w = x_max - x
+    h = y_max - y
+
+    return (x, y, w, h)
+
+
+def box_merge(boxes):
+    min_x, min_y, w, h = boxes[0]
+    max_x = min_x + w
+    max_y = min_y + h
+
+    for box in boxes:
+        x, y, w, h = box
+        x2 = x + w
+        y2 = y + h
+
+        if min_x > x:
+            min_x = x
+        if min_y > y:
+            min_y = y
+        if max_x < x2:
+            max_x = x2
+        if max_y < y2:
+            max_y = y2
+
+    w = max_x - min_x
+    h = max_y - min_y
+
+    return (min_x, min_y, w, h)
+
+
+def merge_boxes(boxes):
+    i = 0
+
+    while (i < len(boxes)):
+        box = boxes[i]
+        over_boxes = []
+        l = len(boxes)
+        index_overlapping_boxes = []
+        for j in range(i + 1, l):
+            if overlapping_boxes(box, boxes[j]):
+                over_boxes.append(boxes[j])
+                index_overlapping_boxes.append(j)
+
+        # If the box overlapped with other boxes they should all be merged
+        if len(over_boxes) > 0:
+            over_boxes.append(box)
+            index_overlapping_boxes.append(i)
+
+            new_boxes = boxes[:i]
+            merged_box = box_merge(over_boxes)
+            new_boxes.append(merged_box)
+
+            for k in range(i + 1, len(boxes)):
+                if k not in index_overlapping_boxes:
+                    new_boxes.append(boxes[k])
+
+            boxes = new_boxes
+        # If the first box did not overlap with anny boxes move on anf check if the next box overaps with any of the other boxes
+        else:
+            i += 1
+
+    return boxes
+
 def mask_image_for_colors(hsv_img):
     img_mask_yellow = cv2.inRange(hsv_img, YELLOW_MIN, YELLOW_MAX)
 
@@ -92,22 +199,23 @@ def mask_image_for_colors(hsv_img):
 
 def detect_objects(masked_imgs):
 
-    objects = []
     for masked_img in masked_imgs:
 
         edges = cv2.Canny(masked_img, 100, 200)
         contours = cv2.findContours(edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[1]
 
-        # Check the size of contour, so it is not just a fex single points
-        for contour in contours:
-            # possible to set a threshold value for this to remove very small contours objects
-            peri = cv2.arcLength(contour, True)
+        boxes = [cv2.boundingRect(object) for object in contours]
+        boxes = merge_boxes(boxes)
 
-            # Find good values for len of contours and peri
-            if len(contour) > 6 and peri > 70:
-                objects.append(contour)
+        # Find good values for volume and w h ratio
+        prediction_boxes = []
+        for box in boxes:
+            x,y,w,h = box
+            if not (w/h > 3 or h/w > 3) and (w*h > 1000):
+                prediction_boxes.append(box)
 
-    return objects
+
+    return prediction_boxes
 
 class simple_object_detector_node:
 

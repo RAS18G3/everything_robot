@@ -67,7 +67,6 @@ int main(int argc, char **argv)
   ros::Subscriber odom_sub = n.subscribe("wheel_odometry", 10, odom_callback);
   ros::Subscriber path_sub = n.subscribe("path", 10, path_callback);
   ros::Subscriber obstacle_sub = n.subscribe("obstacle", 10, obst_callback);
-  ros::Publisher new_point_pub = n.advertise<std_msgs::Bool>("new_point", 10);
   ros::Publisher twist_pub = n.advertise<geometry_msgs::Twist>("/cartesian_motor_controller/twist", 10); //maybe the topic has another name
 
 
@@ -112,8 +111,6 @@ int main(int argc, char **argv)
         twist_msg.linear.y = 0;
         twist_msg.angular.z = 0;
 
-        new_point_msg = true;
-        new_point_pub.publish(new_point_msg);
       }
       else if(std::abs(diff) > 0.2){
         ROS_INFO("spinning");

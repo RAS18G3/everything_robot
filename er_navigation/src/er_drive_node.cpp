@@ -51,7 +51,7 @@ int sign(double x) {
 }
 
 void obst_callback(const std_msgs::Bool::ConstPtr& obst_msg){
-  stop = obst_msg;
+  stop = obst_msg->data;
 }
 
 int main(int argc, char **argv)
@@ -86,6 +86,7 @@ int main(int argc, char **argv)
 
 
     if(stop){
+      ROS_INFO("stop");
       twist_msg.linear.x = 0;
       twist_msg.linear.y = 0;
       twist_msg.angular.z = 0;

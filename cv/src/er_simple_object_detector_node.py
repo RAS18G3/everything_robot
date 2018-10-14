@@ -84,6 +84,8 @@ def mask_image_for_colors(hsv_img):
     # Red and orange are masked as one color
     masked_images = [img_mask_yellow, img_mask_ored, img_mask_blue, img_mask_green]
 
+    #masked_images = [img_mask_ored]
+
     return masked_images
 
 def detect_objects(masked_imgs):
@@ -155,7 +157,13 @@ class simple_object_detector_node:
         boxes = []
         for object in objects:
             box = cv2.boundingRect(object)
-            boxes.append(box)   
+            boxes.append(box)
+
+        for box in boxes:
+            (x,y,w,h) = box
+            cv2.rectangle(cv_image, (x,y), (x+w, y+h), (0,255,0), 1)
+        cv2.imshow('Object_detector', cv_image)
+        cv2.waitKey(1)
 
         l = len(boxes)
         print('Found {} object/s in the image'.format(l))

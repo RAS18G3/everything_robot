@@ -65,11 +65,12 @@ int main(int argc, char **argv)
   tf::TransformListener transformlistner;
 
   ros::Subscriber odom_sub = n.subscribe("wheel_odometry", 10, odom_callback);
-  ros::Subscriber path_sub = n.subscribe("path", 10, path_callback);
+  //ros::Subscriber path_sub = n.subscribe("path", 10, path_callback);
   ros::Subscriber obstacle_sub = n.subscribe("obstacle", 10, obst_callback);
   ros::Publisher twist_pub = n.advertise<geometry_msgs::Twist>("/cartesian_motor_controller/twist", 10); //maybe the topic has another name
 
-  //add subscription that makes stop = true if an obstacle
+  //setup linear
+  float angle_to_point = atan((goal_x-odom_x)/(goal_y-odom_y));
 
   ros::Rate loop_rate(25);
   while(ros::ok()){

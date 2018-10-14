@@ -61,6 +61,8 @@
     <param name="threshold" value="50" />
   </node>
 
+  <node name="simple_object_detector_node" pkg="cv" type="er_simple_object_detector_node.py" output="screen">
+  </node>
 
 
 </launch>

@@ -262,12 +262,12 @@ class simple_object_detector_node:
         masked_images = mask_image_for_colors(hsv_img)
 
         # Try and detect the objects from the masked images
-        objects = detect_objects(masked_images)
+        boxes = detect_objects(masked_images)
 
-        boxes = []
-        for object in objects:
-            box = cv2.boundingRect(object)
-            boxes.append(box)
+        #boxes = []
+        #for object in objects:
+        #    box = cv2.boundingRect(object)
+        #    boxes.append(box)
 
         for box in boxes:
             (x,y,w,h) = box

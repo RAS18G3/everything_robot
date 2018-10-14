@@ -4,8 +4,8 @@
 
 int main(int argc, char **argv)
 {
-float x = 1;
-float y = 1;
+float x = -2;
+float y = -1;
 float w = 0;
 
 

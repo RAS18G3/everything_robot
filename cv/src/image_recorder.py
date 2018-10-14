@@ -9,6 +9,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 import os
+from pynput import keyboard
 
 '''
 Do not forget to source worskpace every time opening a new terminal
@@ -39,20 +40,39 @@ class image_recorder(object):
         self.camera_stop = False
         self.fourcc = cv2.VideoWriter_fourcc(*'MJPG')
         self.writer = None
-        self.counter = 0
+        self.img_nr = 0
 
         self.bridge = CvBridge()
 
-    def run(self):
-        # spin() simply keeps python from exiting until this node is stopped
-        rospy.loginfo('I have started!!!')
-        rospy.spin()
+        with keyboard.Listener(on_press=lambda key: self.on_press(key),
+                               on_release=lambda key: self.on_release(key)) as listener:
+            listener.join()
 
-    def start_camera(self, data):
-        self.camera_rolling = data.data
+    def on_press(self, key):
+        try:
+            print('alphanumeric key {0} pressed'.format(key.char))
+            if key.char == 's':
+                self.camera_rolling = True
+            elif key.char == 'e':
+                self.ang_vel = False
+            elif key.char == 'q' or key == keyboard.Key.esc:
+                exit()
 
-    def stop_camera(self, data):
-        self.camera_stop = True
+        except AttributeError:
+            pass
+
+    def on_release(self, key):
+        try:
+            print('{0} released'.format(key))
+            if key.char == 's':
+                self.camera_rolling = True
+            elif key.char == 'e':
+                self.ang_vel = False
+
+        except AttributeError:
+            pass
+
+
 
     def callback(self, data):
 
@@ -62,48 +82,23 @@ class image_recorder(object):
             print('wrong when converting message to cv2 image')
             print(e)
 
-        print('frame shape: ' + str(frame.shape))
-        print(frame[:,:,0])
-        print('should be storingt img')
-        #img_name = 'img/training_img' + str(self.counter) + '.png'
-
-        #cv2.imwrite(os.path.join(os.getcwd(), img_name), frame)
-        cv2.imwrite('img/image_' + str(self.counter) + '.jpeg', frame)
-        #cv2.imshow('frame', frame)
-        #cv2.waitKey(1)
-
-        #cv2.imwrite(img_name, frame)
-
-        self.counter += 1
-        '''
-        print('frame shape: ' + str(frame.shape))
-
         if self.camera_rolling:
-            self.counter += 1
-            rospy.loginfo('Camera is rolling!!!')
-            # catch the image frame
+            # make sure there is a img folder where the node is run from
+            print('storing img' + str(self.img_nr))
+            cv2.imwrite('img/image_' + str(self.img_nr) + '.jpeg', frame)
+            self.img_nr += 1
 
-            # Initialize the writer which puts frames together in to a video file
-            if self.writer is None:
-                print('making new ghsdajhfdhfghd hgfha hdgf aygfsdka bg')
-                # store the image dimensions, initialzie the video writer,
-                # and construct the zeros array
-                h, w = frame.shape[:2]
-                # make sure arg three matches fps of stream input
-                fps = 10  # make sure it is the same as the input stream otherwise it will have different speed
-                self.writer = cv2.VideoWriter('Training_data', self.fourcc, fps,
-                                              (w, h), True)
+        cv2.imshow('frame', frame)
+        cv2.waitKey(1)
 
-                # write the new file to the video file
-            rospy.loginfo('I am writing to file')
-            # Write the frame to file
-            self.writer.write(frame)
-
-        if self.counter > 50:
-            0/0
-        '''
-
+    def run(self):
+        # spin() simply keeps python from exiting until this node is stopped
+        rospy.loginfo('I have started!!!')
+        rospy.spin()
 
 if __name__ == '__main__':
-    li = image_recorder()
-    li.run()
+    try:
+        li = image_recorder()
+        li.run()
+    except rospy.ROSInterruptException:
+        pass

@@ -4,7 +4,7 @@ roslib.load_manifest('cv')
 #import sys
 import rospy
 import cv2
-#from std_msgs.msg import String, Bool
+from std_msgs.msg import UInt16MultiArray
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
@@ -228,7 +228,7 @@ class simple_object_detector_node:
         rospy.init_node('er_simple_object_detector_node', anonymous=True)
 
         # Change to publish bounding boxes
-        self.image_pub = rospy.Publisher("object_location", Image)
+        self.box_publisher = rospy.Publisher("object_bounding_boxes", UInt16MultiArray)
         # Needed to convert Image message to cv2 image type
         self.bridge = CvBridge()
 
@@ -269,15 +269,22 @@ class simple_object_detector_node:
         #    box = cv2.boundingRect(object)
         #    boxes.append(box)
 
+        # The message which will be sent
+        bounding_box_msg = UInt16MultiArray()
         for box in boxes:
             (x,y,w,h) = box
+            bounding_box_msg.data.append(x)
+            bounding_box_msg.data.append(y)
+            bounding_box_msg.data.append(w)
+            bounding_box_msg.data.append(h)
+
             cv2.rectangle(cv_image, (x,y), (x+w, y+h), (0,255,0), 1)
         cv2.imshow('Object_detector', cv_image)
         cv2.waitKey(1)
 
         l = len(boxes)
 
-
+        self.box_publisher.publish(bounding_box_msg)
         print('Found {} object/s in the image'.format(l))
         # Should publish the boxes
 

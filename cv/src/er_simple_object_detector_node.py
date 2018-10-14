@@ -285,7 +285,7 @@ class simple_object_detector_node:
         l = len(boxes)
 
         self.box_publisher.publish(bounding_box_msg)
-        print('Found {} object/s in the image'.format(l))
+        print('published the following bounding boxes: ' + str(bounding_box_msg))
         # Should publish the boxes
 
 '''

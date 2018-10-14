@@ -166,6 +166,8 @@ class simple_object_detector_node:
         cv2.waitKey(1)
 
         l = len(boxes)
+
+
         print('Found {} object/s in the image'.format(l))
         # Should publish the boxes
 

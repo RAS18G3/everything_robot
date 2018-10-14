@@ -33,9 +33,12 @@ add_message_files(
 
 add_executable(er_pointcloud_to_2d_node src/er_pointcloud_to_2d_node.cpp)
 add_executable(er_obstacle_detection_node src/er_obstacle_detection_node.cpp)
+add_executable(er_object_filter_node src/er_object_filter_node.cpp)
 
 add_dependencies(er_pointcloud_to_2d_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(er_obstacle_detection_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(er_object_filter_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(er_pointcloud_to_2d_node ${catkin_LIBRARIES})
 target_link_libraries(er_obstacle_detection_node ${catkin_LIBRARIES})
+target_link_libraries(er_object_filter_node ${catkin_LIBRARIES})

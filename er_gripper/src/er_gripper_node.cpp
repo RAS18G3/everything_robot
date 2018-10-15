@@ -16,16 +16,15 @@ int main(int argc, char **argv)
   grip_pub = n.advertise<std_msgs::Int64>("grip", 1);
 
   angle_msg.data = 0;
-  int deg_delta = 5; // servo change each step
+  int deg_delta = 1; // servo change each step
 
-  ros::Rate loop_rate(5); // 5Hz should be slow enough for testing
+  ros::Rate loop_rate(50); // 5Hz should be slow enough for testing
   while (ros::ok())
   {
     ros::spinOnce();
 
     // respect the bounds and "bounce" around them...
-    if(angle_msg.data > 90){ deg_delta = -5; }
-    if(angle_msg.data < 0){ deg_delta = 5; }
+    if(angle_msg.data > 180 | angle_msg.data < 0){ deg_delta *= -1; }
 
     angle_msg.data += deg_delta;
     grip_pub.publish(angle_msg);

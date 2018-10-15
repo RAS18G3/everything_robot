@@ -4,10 +4,10 @@
   * ros.h and std_msg/Int64.h need to be in the same dir
 */
 
-#include <Servo.h>
+#define USE_USBCON
 #include <ros.h>
 #include <std_msgs/Int64.h>
-
+#include <Servo.h>
 
 Servo grip_servo;  // create a servo object
 
@@ -35,6 +35,7 @@ ros::Subscriber<std_msgs::Int64> sub("grip", grip_callback);
 
 void setup()
 {
+//  Serial.begin(9600);
   nh.initNode();
   nh.subscribe(sub);
   grip_servo.attach(servo_pin);  // attaches the servo object to the given pin

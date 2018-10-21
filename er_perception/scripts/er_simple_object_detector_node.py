@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import roslib
-roslib.load_manifest('my_package')
 import sys
 import rospy
 import cv2
@@ -10,7 +9,7 @@ from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 
 '''
-Do not forget to source worskpace every time opening a new terminal 
+Do not forget to source worskpace every time opening a new terminal
 source ./delev/setup.bash
 Do not forget to make python file executable everytime creating a new pyhon node
 chmod +x file_name.py
@@ -63,7 +62,7 @@ def mask_image_for_colors(hsv_img):
     img_mask_yellow = cv2.inRange(hsv_img, YELLOW_MIN, YELLOW_MAX)
 
 
-    # Mask on both the high and low end of the hue vlue span since red - orange goes from h ≈ 159 -> h ≈ 15
+    # Mask on both the high and low end of the hue vlue span since red - orange goes from h ~ 159 -> h ~ 15
     img_thresh_ored_low = cv2.inRange(hsv_img, RED_ORANGE_MIN_LOW, RED_ORANGE_MAX_LOW)
     img_thresh_ored_high = cv2.inRange(hsv_img, RED_ORANGE_MIN_HIGH, RED_ORANGE_MAX_HIGH)
     img_mask_ored = cv2.bitwise_or(img_thresh_ored_low, img_thresh_ored_high)

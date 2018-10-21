@@ -33,11 +33,7 @@ class image_recorder(object):
         # set the csllback function for the camera topic
         rospy.Subscriber('camera/rgb/image_rect_color', Image, self.callback)
 
-        rospy.Subscriber("camera_start", Bool, self.start_camera)
-        rospy.Subscriber("stop_camera", Bool, self.stop_camera)
-
-        self.camera_rolling = True
-        self.camera_stop = False
+        self.camera_rolling = False
         self.fourcc = cv2.VideoWriter_fourcc(*'MJPG')
         self.writer = None
         self.img_nr = 0
@@ -51,10 +47,10 @@ class image_recorder(object):
     def on_press(self, key):
         try:
             print('alphanumeric key {0} pressed'.format(key.char))
-            if key.char == 's':
+            if key.char == 'r':
                 self.camera_rolling = True
             elif key.char == 'e':
-                self.ang_vel = False
+                self.camera_rolling = False
             elif key.char == 'q' or key == keyboard.Key.esc:
                 exit()
 
@@ -63,11 +59,7 @@ class image_recorder(object):
 
     def on_release(self, key):
         try:
-            print('{0} released'.format(key))
-            if key.char == 's':
-                self.camera_rolling = True
-            elif key.char == 'e':
-                self.ang_vel = False
+            pass
 
         except AttributeError:
             pass
@@ -87,6 +79,7 @@ class image_recorder(object):
             print('storing img' + str(self.img_nr))
             cv2.imwrite('img/image_' + str(self.img_nr) + '.jpeg', frame)
             self.img_nr += 1
+            self.camera_rolling = False
 
         cv2.imshow('frame', frame)
         cv2.waitKey(1)

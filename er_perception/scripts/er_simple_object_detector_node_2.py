@@ -22,13 +22,13 @@ class simple_object_detector_node:
     def __init__(self):
         rospy.init_node('er_simple_object_detector_node', anonymous=True)
 
-        self.box_publisher = rospy.Publisher("object_bounding_boxes", UInt16MultiArray)
+        self.box_publisher = rospy.Publisher("object_bounding_boxes", UInt16MultiArray, queue_size=1)
 
         # Needed to convert Image message to cv2 image type
         self.bridge = CvBridge()
 
         # Subscriber listening for the images sent by the camera, and set the callback function
-        self.image_sub = rospy.Subscriber('camera/rgb/image_rect_color', Image, self.detect_object)
+        self.image_sub = rospy.Subscriber('camera/rgb/image_rect_color', Image, self.detect_object, queue_size=1)
 
     def run(self):
         # spin() simply keeps python from exiting until this node is stopped

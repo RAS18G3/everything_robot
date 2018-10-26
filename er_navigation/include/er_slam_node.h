@@ -6,8 +6,10 @@
 #include "ros/ros.h"
 #include "nav_msgs/Odometry.h"
 #include "nav_msgs/OccupancyGrid.h"
+#include "std_srvs/Trigger.h"
 
 #include <string>
+#include <vector>
 
 class SLAMNode {
 public:
@@ -17,13 +19,32 @@ public:
   void run_node();
 
 private:
+  // Methods
   void init_node();
+  bool reset_localization(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response );
 
+  // Type definitions
+  struct Particle {
+    double x, y, theta;
+
+    Particle(double pos_x, double pos_y, double pos_theta) : x(pos_x), y(pos_y), theta(pos_theta) {};
+  };
+
+  enum State { None, Localization, Tracking };
+
+  // ROS specific member variables
   ros::NodeHandle nh_;
   ros::Publisher map_publisher_;
   ros::Rate loop_rate_;
-
+  ros::ServiceServer reset_localization_service_;
+  
   nav_msgs::OccupancyGrid current_map_;
+
+  // Particle filter member variables
+  State current_state_;
+
+  std::vector<Particle> particles_;
+
 };
 
 

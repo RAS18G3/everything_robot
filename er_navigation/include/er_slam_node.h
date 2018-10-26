@@ -10,6 +10,7 @@
 
 #include <string>
 #include <vector>
+#include <random>
 
 class SLAMNode {
 public:
@@ -37,13 +38,13 @@ private:
   ros::Publisher map_publisher_;
   ros::Rate loop_rate_;
   ros::ServiceServer reset_localization_service_;
-  
+
   nav_msgs::OccupancyGrid current_map_;
 
   // Particle filter member variables
   State current_state_;
-
   std::vector<Particle> particles_;
+  int particles_per_m2_;
 
 };
 

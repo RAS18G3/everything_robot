@@ -7,6 +7,9 @@
 #include "nav_msgs/Odometry.h"
 #include "nav_msgs/OccupancyGrid.h"
 #include "std_srvs/Trigger.h"
+#include "geometry_msgs/PoseArray.h"
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 #include <string>
 #include <vector>
@@ -23,6 +26,7 @@ private:
   // Methods
   void init_node();
   bool reset_localization(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response );
+  void publish_particles();
 
   // Type definitions
   struct Particle {
@@ -36,6 +40,7 @@ private:
   // ROS specific member variables
   ros::NodeHandle nh_;
   ros::Publisher map_publisher_;
+  ros::Publisher particles_publisher_;
   ros::Rate loop_rate_;
   ros::ServiceServer reset_localization_service_;
 

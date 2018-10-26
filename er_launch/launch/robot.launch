@@ -45,6 +45,7 @@
   <node name="slam" pkg="er_navigation" type="er_slam_node" output="screen">
     <param name="map_file" value="$(find ras_maze_map)/maps/lab_maze_2018.txt" />
     <param name="particles_per_m2" value="100" />
+    <param name="odometry_topic" value="/wheel_odometry" />
   </node>
 
   <include file="$(find realsense_camera)/launch/sr300_nodelet_rgbd.launch" />

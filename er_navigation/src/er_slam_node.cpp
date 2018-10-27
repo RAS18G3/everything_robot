@@ -24,6 +24,7 @@ void SLAMNode::init_node() {
 
   // read params
   ros::param::param<std::string>("~map_file", map_path, "");
+  ros::param::param<double>("~map_margin", map_margin_, 0.5);
   ros::param::param<int>("~particles_per_m2", particles_per_m2_, 20);
   ros::param::param<int>("~beam_count", beam_count_, 8);
   ros::param::param<std::string>("~odometry_topic", odometry_topic, "/wheel_odometry");
@@ -41,7 +42,7 @@ void SLAMNode::init_node() {
   odometry_subscriber_ = nh_.subscribe<nav_msgs::Odometry>(odometry_topic, 1, &SLAMNode::odometry_cb, this);
   odometry_subscriber_ = nh_.subscribe<>(laser_scan_topic, 1, &SLAMNode::laser_scan_cb, this);
 
-  current_map_ = map_reader.occupancy_grid();
+  current_map_ = map_reader.occupancy_grid(map_margin_);
 
   // advertise the service which will reset the localization
   reset_localization_service_ = nh_.advertiseService(node_name + "/reset_localization", &SLAMNode::reset_localization, this);
@@ -85,8 +86,8 @@ bool SLAMNode::reset_localization(std_srvs::Trigger::Request& request, std_srvs:
   std::uniform_real_distribution<double> angle_generator(-M_PI, M_PI);
   // generate the particle set
   for(int i=0; i<num_particles; ++i) {
-    // particles_.emplace_back(x_generator(generator), y_generator(generator), angle_generator(generator));
-    particles_.emplace_back(0, 0, 0);
+    particles_.emplace_back(x_generator(generator), y_generator(generator), angle_generator(generator));
+    // particles_.emplace_back(0, 0, 0);
   }
 
   for(auto it = particles_.begin(); it != particles_.end(); ++it) {
@@ -215,12 +216,12 @@ void SLAMNode::measurement_update(const sensor_msgs::LaserScan::ConstPtr& laser_
 
   // for each particle, compare the expected measurement to the actual measurement
   for(auto it = particles_.begin(); it != particles_.end(); ++it) {
-    for(auto it = laser_scans.begin(); it != laser_scans.end(); ++it) {
-      ROS_DEBUG_STREAM(it->range << " " << it->angle);
-    }
   }
 
-  ROS_INFO_STREAM(laser_scan_msg->ranges.size() << " " << laser_scan_msg->angle_min << " " << laser_scan_msg->angle_max << " " << laser_scan_msg->angle_increment);
+  ROS_INFO("Raycast estimates");
+  for(auto it = laser_scans.begin(); it != laser_scans.end(); ++it) {
+    ROS_INFO_STREAM(it->angle << " -> " << ray_cast(current_map_, 0.2, 0.2, it->angle));
+  }
 }
 
 int main(int argc, char **argv)

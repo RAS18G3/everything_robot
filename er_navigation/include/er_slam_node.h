@@ -57,6 +57,7 @@ private:
   // Particle filter member variables
   State current_state_; // this will keep track of whether the robot is localized, in which case mapping can be done
   std::vector<Particle> particles_;
+  double map_margin_;
   int particles_per_m2_; // to calculate how many particles to generate based on map size
   int beam_count_; // to reduce the computational load, this is the maximum number of beams to be used
   double alpha_rot_rot_, alpha_rot_trans_, alpha_trans_rot_, alpha_trans_trans_;

@@ -28,17 +28,20 @@ public:
 private:
   // Methods
   void init_node();
-  bool reset_localization(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response );
+  bool reset_localization_cb(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response );
+  void reset_localization();
   void publish_particles();
   void odometry_cb(const nav_msgs::Odometry::ConstPtr& msg);
   void laser_scan_cb(const sensor_msgs::LaserScan::ConstPtr& msg);
   void measurement_update(const sensor_msgs::LaserScan::ConstPtr& laser_scan_msg);
+  void resample();
 
   // Type definitions
   struct Particle {
-    double x, y, theta;
+    double x, y, theta, weight;
 
-    Particle(double pos_x, double pos_y, double pos_theta) : x(pos_x), y(pos_y), theta(pos_theta) {};
+    Particle(double pos_x, double pos_y, double pos_theta) : x(pos_x), y(pos_y), theta(pos_theta), weight(1) {};
+    Particle(const Particle& rhs ) : x(rhs.x), y(rhs.y), theta(rhs.theta), weight(1) {};
   };
 
   enum State { None, Localization, Tracking };
@@ -61,7 +64,9 @@ private:
   double map_margin_;
   int particles_per_m2_; // to calculate how many particles to generate based on map size
   int beam_count_; // to reduce the computational load, this is the maximum number of beams to be used
+  int num_particles_; // the number of particles after resetting and as long as the algorithm is not adaptive
   double alpha_rot_rot_, alpha_rot_trans_, alpha_trans_rot_, alpha_trans_trans_;
+  double laser_sigma_;
 
 };
 

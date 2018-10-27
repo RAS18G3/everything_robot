@@ -8,6 +8,13 @@ void fix_angle(double& angle) {
       angle -= M_PI;
 }
 
+/* evaluate the normal distributions pdf
+ * sigma is standard deviation
+ */
+double evaluate_gaussian(double x, double sigma, double mu=0) {
+  return std::exp( - std::pow(x - mu, 2) / (2 * sigma * sigma) ) / (sigma * std::sqrt(2*M_PI));
+}
+
 SLAMNode::SLAMNode() : nh_(), loop_rate_(10), current_state_(None), last_odometry_msg_(nullptr) {
 
 }
@@ -32,7 +39,8 @@ void SLAMNode::init_node() {
   ros::param::param<double>("~alpha_trans_trans", alpha_trans_trans_, 0.001);
   ros::param::param<double>("~alpha_trans_rot", alpha_trans_rot_, 0.00001);
   ros::param::param<double>("~alpha_rot_trans", alpha_rot_trans_, 0.000000001);
-  ros::param::param<double>("~alpha_rot_rot", alpha_rot_rot_,     0.00000001);
+  ros::param::param<double>("~alpha_rot_rot", alpha_rot_rot_,     0.000000005);
+  ros::param::param<double>("~laser_sigma", laser_sigma_, 0.05);
 
   MapReader map_reader(map_path);
 
@@ -45,7 +53,9 @@ void SLAMNode::init_node() {
   current_map_ = map_reader.occupancy_grid(map_margin_);
 
   // advertise the service which will reset the localization
-  reset_localization_service_ = nh_.advertiseService(node_name + "/reset_localization", &SLAMNode::reset_localization, this);
+  reset_localization_service_ = nh_.advertiseService(node_name + "/reset_localization", &SLAMNode::reset_localization_cb, this);
+
+  reset_localization(); // this will init the particle filter
 }
 
 void SLAMNode::run_node() {
@@ -62,17 +72,23 @@ void SLAMNode::run_node() {
   }
 }
 
-bool SLAMNode::reset_localization(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response ) {
+bool SLAMNode::reset_localization_cb(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response ) {
   ROS_INFO("Reset localization...");
   response.success = true;
 
-  // uniformly initialize the particle set
+  reset_localization();
 
+  ROS_INFO_STREAM("Reset localization successful. Particles generated: " << particles_.size());
+  return true;
+}
+
+void SLAMNode::reset_localization() {
+  // uniformly initialize the particle set
   particles_.clear();
   // calculate the map area in m^2
   double area = current_map_.info.width * current_map_.info.height * current_map_.info.resolution * current_map_.info.resolution;
   // get a certain number of particles per m^2
-  int num_particles = area * particles_per_m2_;
+  num_particles_ = area * particles_per_m2_;
 
   double x_min = current_map_.info.origin.position.x;
   double x_max = current_map_.info.origin.position.x + current_map_.info.width * current_map_.info.resolution;
@@ -85,9 +101,8 @@ bool SLAMNode::reset_localization(std_srvs::Trigger::Request& request, std_srvs:
   std::uniform_real_distribution<double> y_generator(y_min, y_max);
   std::uniform_real_distribution<double> angle_generator(-M_PI, M_PI);
   // generate the particle set
-  for(int i=0; i<num_particles; ++i) {
+  for(int i=0; i<num_particles_; ++i) {
     particles_.emplace_back(x_generator(generator), y_generator(generator), angle_generator(generator));
-    // particles_.emplace_back(0, 0, 0);
   }
 
   for(auto it = particles_.begin(); it != particles_.end(); ++it) {
@@ -95,9 +110,6 @@ bool SLAMNode::reset_localization(std_srvs::Trigger::Request& request, std_srvs:
   }
 
   current_state_ = Localization;
-
-  ROS_INFO_STREAM("Reset localization successful. Particles generated: " << particles_.size());
-  return true;
 }
 
 void SLAMNode::publish_particles() {
@@ -129,7 +141,7 @@ void SLAMNode::odometry_cb(const nav_msgs::Odometry::ConstPtr& msg) {
     // measure time of this callback
     ros::WallTime start_time = ros::WallTime::now();
 
-    // extract 2d position and orientation
+    // extract 2d position and orientation (where was the robot in previous odometry msg, where is it in the current one)
     // TODO: any nicer way of doing this? probably lots of unnecessary computations done here...
     double x2 = msg->pose.pose.position.x, y2=msg->pose.pose.position.y;
     double x1 = last_odometry_msg_->pose.pose.position.x, y1=last_odometry_msg_->pose.pose.position.y;
@@ -218,12 +230,61 @@ void SLAMNode::measurement_update(const sensor_msgs::LaserScan::ConstPtr& laser_
   // for each particle, compare the expected measurement to the actual measurement
   for(auto particles_it = particles_.begin(); particles_it != particles_.end(); ++particles_it) {
     for(auto laser_it = laser_scans.begin(); laser_it != laser_scans.end(); ++laser_it) {
-      double angle = particles_it->theta + laser_it->angle;
-      fix_angle(angle);
-      ray_cast(current_map_, 0.2, 0.2, angle);
+      // offset the particle based on the lidar position
+      double x = particles_it->x + lidar_x * cos(particles_it->theta) + lidar_y * sin(particles_it->theta);
+      double y = particles_it->y + lidar_x * sin(particles_it->theta) + lidar_y * cos(particles_it->theta);
+
+      // calculate laser angle in global reference frame
+      double laser_angle = particles_it->theta + laser_it->angle;
+      fix_angle(laser_angle);
+
+      // check what's the expected range
+      double range_expected = ray_cast(current_map_, x, y, laser_angle);
+      double range_error = laser_it->range - range_expected;
+
+      // adjust the weight of the particle based on how likely that measurement is
+      particles_it->weight *= evaluate_gaussian(range_error, laser_sigma_);
     }
   }
+
+  // resample
+  resample();
   ROS_INFO_STREAM("Measurement time: " << (ros::WallTime::now()-start_time).toSec());
+}
+
+void SLAMNode::resample() {
+  // algorithm from p. 110 in Probabilistic Robotics (low variance sampler)
+
+  // normalize the weights, s.t. they add up to 1
+  double weight_sum = 0;
+  ROS_INFO_STREAM("resampling...");
+  for(auto particles_it = particles_.begin(); particles_it != particles_.end(); ++particles_it) {
+    weight_sum += particles_it->weight;
+  }
+  for(auto particles_it = particles_.begin(); particles_it != particles_.end(); ++particles_it) {
+    particles_it->weight /= weight_sum;
+    ROS_INFO_STREAM(particles_it->weight);
+  }
+
+  // using move here, so that there is no unnecessary copy of the particles
+  std::vector<Particle> old_particles = std::move(particles_);
+  particles_ = std::vector<Particle>();
+
+  // TODO: adaptive resampling
+  std::default_random_engine generator;
+  std::uniform_real_distribution<double> step_generator(0,  1. / old_particles.size());
+  double offset = step_generator(generator);
+  double cumulated_weight = old_particles[0].weight, current_weight;
+  int current_particle_idx = 0;
+  while(particles_.size() < num_particles_) {
+    current_weight = offset + (particles_.size()) * 1. / old_particles.size();
+    while(current_weight > cumulated_weight) {
+      ++current_particle_idx;
+      cumulated_weight = cumulated_weight + old_particles[current_particle_idx].weight;
+    }
+    particles_.push_back(old_particles[current_particle_idx]); // this calls the copy constructor, which will not copy the weight, but resets it to 1
+  }
+
 }
 
 int main(int argc, char **argv)

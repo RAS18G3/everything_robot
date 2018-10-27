@@ -35,7 +35,7 @@ void SLAMNode::init_node() {
   map_publisher_ = nh_.advertise<nav_msgs::OccupancyGrid>(node_name + "/occupancy_grid", 1);
   particles_publisher_ = nh_.advertise<geometry_msgs::PoseArray>(node_name + "/particles", 1);
 
-  odometry_subscriber_ = nh_.subscribe<nav_msgs::Odometry>(odometry_topic, 10, &SLAMNode::odometry_cb, this);
+  odometry_subscriber_ = nh_.subscribe<nav_msgs::Odometry>(odometry_topic, 1, &SLAMNode::odometry_cb, this);
 
   current_map_ = map_reader.occupancy_grid();
 
@@ -122,6 +122,9 @@ void SLAMNode::odometry_cb(const nav_msgs::Odometry::ConstPtr& msg) {
   // first check if there is a previous odometry msg
   // we will use the position difference to that to calculate the movement between two odometry messages
   if (last_odometry_msg_ != nullptr) {
+    // measure time of this callback
+    ros::WallTime start_time = ros::WallTime::now();
+
     // extract 2d position and orientation
     // TODO: any nicer way of doing this? probably lots of unnecessary computations done here...
     double x2 = msg->pose.pose.position.x, y2=msg->pose.pose.position.y;
@@ -146,8 +149,6 @@ void SLAMNode::odometry_cb(const nav_msgs::Odometry::ConstPtr& msg) {
     std::normal_distribution<double> trans_noise(0,std::sqrt( alpha_rot_trans_ * ( std::pow(delta_rot1,2) + std::pow(delta_rot2,2) ) + alpha_trans_trans_ * std::pow(delta_trans,2)));
     std::normal_distribution<double> rot2_noise(0,std::sqrt( alpha_rot_rot_ * std::pow(delta_rot2,2) + alpha_trans_rot_ * std::pow(delta_trans,2)));
 
-    ROS_INFO_STREAM(delta_rot1 + delta_rot2);
-
     double delta_rot1_hat, delta_rot2_hat, delta_trans_hat;
     for(auto it = particles_.begin(); it != particles_.end(); ++it) {
       // add different noise for every particle
@@ -161,6 +162,8 @@ void SLAMNode::odometry_cb(const nav_msgs::Odometry::ConstPtr& msg) {
       it->theta = it->theta + delta_rot1_hat + delta_rot2_hat;
       fix_angle(it->theta);
     }
+
+    ROS_INFO_STREAM("Prediction time: " << (ros::WallTime::now()-start_time).toSec());
   }
   last_odometry_msg_ = msg;
 }

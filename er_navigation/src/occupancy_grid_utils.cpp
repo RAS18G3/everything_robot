@@ -27,9 +27,8 @@ void draw_line(nav_msgs::OccupancyGrid &occupancy_grid, double x_start, double x
  *
  * angle is assumed to be in [-pi;pi]
  */
-double ray_cast(nav_msgs::OccupancyGrid &occupancy_grid, double x, double y, double angle) {
+double ray_cast(nav_msgs::OccupancyGrid &occupancy_grid, double x, double y, double angle, double error_value) {
   // find starting grid index
-
   x = (x - occupancy_grid.info.origin.position.x) / occupancy_grid.info.resolution;
   y = (y - occupancy_grid.info.origin.position.y) / occupancy_grid.info.resolution;
 
@@ -56,28 +55,33 @@ double ray_cast(nav_msgs::OccupancyGrid &occupancy_grid, double x, double y, dou
   double t_delta_x = std::abs(1/v_x);
   double t_delta_y = std::abs(1/v_y);
 
-
-  ROS_INFO_STREAM("new ray " << x << " " << y << " " << angle);
-  ROS_INFO_STREAM(x_discrete << " " << y_discrete);
-
   // iterate over the line until there is an obstacle (note there should always be one, since we are inside the maze)
-  while(at(occupancy_grid, x_discrete, y_discrete) < 50) {
-    if(t_max_x < t_max_y) {
-      t_max_x = t_max_x + t_delta_x;
-      x_discrete = x_discrete + step_x;
+  try {
+    while(at(occupancy_grid, x_discrete, y_discrete) < 50) {
+      if(t_max_x < t_max_y) {
+        t_max_x = t_max_x + t_delta_x;
+        x_discrete = x_discrete + step_x;
+      }
+      else {
+        t_max_y = t_max_y + t_delta_y;
+        y_discrete = y_discrete + step_y;
+      }
     }
-    else {
-      t_max_y = t_max_y + t_delta_y;
-      y_discrete = y_discrete + step_y;
-    }
-    ROS_INFO_STREAM(x_discrete << " " << y_discrete);
   }
-
+  catch (...) {
+    return error_value;
+  }
   return std::sqrt( std::pow(x_discrete+0.5-x_start, 2) + std::pow(y_discrete+0.5-y_start, 2) ) * occupancy_grid.info.resolution;
+
 }
 
 int8_t&  at(nav_msgs::OccupancyGrid &occupancy_grid, int x, int y) {
-  occupancy_grid.data[y*occupancy_grid.info.width + x];
+  if(x >= occupancy_grid.info.width || x < 0)
+    throw std::out_of_range ("x out of map boundaries");
+  else if (y >= occupancy_grid.info.height || y < 0)
+    throw std::out_of_range ("y out of map boundaries");
+  else
+    occupancy_grid.data[y*occupancy_grid.info.width + x];
 }
 
 int sign(int x) {

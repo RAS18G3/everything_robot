@@ -40,7 +40,7 @@ void SLAMNode::init_node() {
   particles_publisher_ = nh_.advertise<geometry_msgs::PoseArray>(node_name + "/particles", 1);
 
   odometry_subscriber_ = nh_.subscribe<nav_msgs::Odometry>(odometry_topic, 1, &SLAMNode::odometry_cb, this);
-  odometry_subscriber_ = nh_.subscribe<>(laser_scan_topic, 1, &SLAMNode::laser_scan_cb, this);
+  laser_scan_subscriber_ = nh_.subscribe<>(laser_scan_topic, 1, &SLAMNode::laser_scan_cb, this);
 
   current_map_ = map_reader.occupancy_grid(map_margin_);
 
@@ -123,7 +123,6 @@ void SLAMNode::publish_particles() {
 
 
 void SLAMNode::odometry_cb(const nav_msgs::Odometry::ConstPtr& msg) {
-  // ROS_INFO("received odom");
   // first check if there is a previous odometry msg
   // we will use the position difference to that to calculate the movement between two odometry messages
   if (last_odometry_msg_ != nullptr) {
@@ -178,6 +177,8 @@ void SLAMNode::laser_scan_cb(const sensor_msgs::LaserScan::ConstPtr& msg) {
 }
 
 void SLAMNode::measurement_update(const sensor_msgs::LaserScan::ConstPtr& laser_scan_msg) {
+  ros::WallTime start_time = ros::WallTime::now();
+
   // TEMP FIX
   // TODO: use TF to get the transform between base_link and frame_id of laser_scan_msg and calculate the offset based on that
   const double lidar_angle = M_PI;
@@ -215,13 +216,14 @@ void SLAMNode::measurement_update(const sensor_msgs::LaserScan::ConstPtr& laser_
   }
 
   // for each particle, compare the expected measurement to the actual measurement
-  for(auto it = particles_.begin(); it != particles_.end(); ++it) {
+  for(auto particles_it = particles_.begin(); particles_it != particles_.end(); ++particles_it) {
+    for(auto laser_it = laser_scans.begin(); laser_it != laser_scans.end(); ++laser_it) {
+      double angle = particles_it->theta + laser_it->angle;
+      fix_angle(angle);
+      ray_cast(current_map_, 0.2, 0.2, angle);
+    }
   }
-
-  ROS_INFO("Raycast estimates");
-  for(auto it = laser_scans.begin(); it != laser_scans.end(); ++it) {
-    ROS_INFO_STREAM(it->angle << " -> " << ray_cast(current_map_, 0.2, 0.2, it->angle));
-  }
+  ROS_INFO_STREAM("Measurement time: " << (ros::WallTime::now()-start_time).toSec());
 }
 
 int main(int argc, char **argv)

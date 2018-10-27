@@ -48,6 +48,7 @@ private:
   ros::Publisher map_publisher_;
   ros::Publisher particles_publisher_;
   ros::Subscriber odometry_subscriber_;
+  ros::Subscriber laser_scan_subscriber_;
   ros::Rate loop_rate_;
   ros::ServiceServer reset_localization_service_;
 

@@ -172,9 +172,55 @@ void SLAMNode::odometry_cb(const nav_msgs::Odometry::ConstPtr& msg) {
   last_odometry_msg_ = msg;
 }
 
-
 void SLAMNode::laser_scan_cb(const sensor_msgs::LaserScan::ConstPtr& msg) {
-  ROS_INFO("received scan");
+  measurement_update(msg);
+}
+
+void SLAMNode::measurement_update(const sensor_msgs::LaserScan::ConstPtr& laser_scan_msg) {
+  // TEMP FIX
+  // TODO: use TF to get the transform between base_link and frame_id of laser_scan_msg and calculate the offset based on that
+  const double lidar_angle = M_PI;
+  const double lidar_x = 0.03;
+  const double lidar_y = 0;
+
+  // first find the laser beams to use
+  // the data will be inf in random placces (every 2nd, but sometimes even or odd indices)
+  // and we want to maximally use beam_count_ laser beams, optimally equally distributed
+  struct LaserScan {
+    double range, angle;
+    LaserScan(double r, double a) : range(r), angle(a) {};
+  };
+  std::vector<LaserScan> laser_scans;
+
+  // e.g. if there are 100 beams, and we want 2 beams, this way we will skip 49 indices, and take the next feasible
+  // measurement starting at 50 (because we increase the index once more in the for loop)
+
+  int skip = laser_scan_msg->ranges.size() / beam_count_ - 1;
+  skip = skip < 0? 0 : skip;
+
+  for(int i = 0; i < laser_scan_msg->ranges.size(); ++i) {
+    double range = laser_scan_msg->ranges[i];
+    if(!std::isinf(range) && range <= laser_scan_msg->range_max && range >= laser_scan_msg->range_min) {
+      double angle =  laser_scan_msg->angle_min + i * laser_scan_msg->angle_increment + lidar_angle;
+      fix_angle(angle);
+      laser_scans.emplace_back(range, angle);
+      i += skip; // we might end up with less than beam_count readings, but only if lots of readings are shitty anyways
+    }
+  }
+
+  ROS_DEBUG_STREAM("Scan...");
+  for(auto it = laser_scans.begin(); it != laser_scans.end(); ++it) {
+    ROS_DEBUG_STREAM(it->range << " " << it->angle);
+  }
+
+  // for each particle, compare the expected measurement to the actual measurement
+  for(auto it = particles_.begin(); it != particles_.end(); ++it) {
+    for(auto it = laser_scans.begin(); it != laser_scans.end(); ++it) {
+      ROS_DEBUG_STREAM(it->range << " " << it->angle);
+    }
+  }
+
+  ROS_INFO_STREAM(laser_scan_msg->ranges.size() << " " << laser_scan_msg->angle_min << " " << laser_scan_msg->angle_max << " " << laser_scan_msg->angle_increment);
 }
 
 int main(int argc, char **argv)

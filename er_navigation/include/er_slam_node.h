@@ -2,6 +2,7 @@
 #define ER_SLAM_NODE_H
 
 #include "map_reader.h"
+#include "occupancy_grid_utils.h"
 
 #include "ros/ros.h"
 #include "nav_msgs/Odometry.h"
@@ -31,6 +32,7 @@ private:
   void publish_particles();
   void odometry_cb(const nav_msgs::Odometry::ConstPtr& msg);
   void laser_scan_cb(const sensor_msgs::LaserScan::ConstPtr& msg);
+  void measurement_update(const sensor_msgs::LaserScan::ConstPtr& laser_scan_msg);
 
   // Type definitions
   struct Particle {

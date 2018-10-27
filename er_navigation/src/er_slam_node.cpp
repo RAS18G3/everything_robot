@@ -15,7 +15,7 @@ double evaluate_gaussian(double x, double sigma, double mu=0) {
   return std::exp( - std::pow(x - mu, 2) / (2 * sigma * sigma) ) / (sigma * std::sqrt(2*M_PI));
 }
 
-SLAMNode::SLAMNode() : nh_(), loop_rate_(10), current_state_(None), last_odometry_msg_(nullptr) {
+SLAMNode::SLAMNode() : nh_(), loop_rate_(10), current_state_(None), last_odometry_msg_(nullptr), transform_listener_(transform_buffer_) {
 
 }
 
@@ -66,6 +66,8 @@ void SLAMNode::run_node() {
 
     map_publisher_.publish(current_map_);
     publish_particles();
+
+    publish_transform();
 
     loop_rate_.sleep();
 
@@ -243,7 +245,7 @@ void SLAMNode::measurement_update(const sensor_msgs::LaserScan::ConstPtr& laser_
       double range_error = laser_it->range - range_expected;
 
       // adjust the weight of the particle based on how likely that measurement is
-      particles_it->weight *= evaluate_gaussian(range_error, laser_sigma_);
+      particles_it->weight *= (evaluate_gaussian(range_error, laser_sigma_) + 0.2);
     }
   }
 
@@ -257,13 +259,11 @@ void SLAMNode::resample() {
 
   // normalize the weights, s.t. they add up to 1
   double weight_sum = 0;
-  ROS_INFO_STREAM("resampling...");
   for(auto particles_it = particles_.begin(); particles_it != particles_.end(); ++particles_it) {
     weight_sum += particles_it->weight;
   }
   for(auto particles_it = particles_.begin(); particles_it != particles_.end(); ++particles_it) {
     particles_it->weight /= weight_sum;
-    ROS_INFO_STREAM(particles_it->weight);
   }
 
   // using move here, so that there is no unnecessary copy of the particles
@@ -285,6 +285,46 @@ void SLAMNode::resample() {
     particles_.push_back(old_particles[current_particle_idx]); // this calls the copy constructor, which will not copy the weight, but resets it to 1
   }
 
+}
+
+void SLAMNode::publish_transform() {
+    // find mean of particle set
+    double x=0, y=0, yaw_x=0, yaw_y=0;
+    for(auto particles_it = particles_.begin(); particles_it != particles_.end(); ++particles_it) {
+      x += particles_it->x;
+      y += particles_it->y;
+      yaw_x += cos(particles_it->theta);
+      yaw_y += sin(particles_it->theta);
+    }
+    x /= particles_.size();
+    y /= particles_.size();
+    double yaw = std::atan2(yaw_y, yaw_x);
+    // this represents map->base_link
+    tf2::Quaternion map_base_link_quaternion;
+    map_base_link_quaternion.setRPY(0, 0, yaw);
+    tf2::Vector3 map_base_link_position(x, y, 0.0);
+    tf2::Transform map_base_link(map_base_link_quaternion, map_base_link_position);
+
+
+    // get the most up-to-date odom->base_link transform
+    geometry_msgs::TransformStamped base_link_odom_msg;
+    try {
+      base_link_odom_msg = transform_buffer_.lookupTransform("base_link", "odom", ros::Time(0));
+    }
+    catch (tf2::TransformException &ex) {
+      ROS_WARN("%s",ex.what());
+      return;
+    }
+    tf2::Transform base_link_odom;
+    tf2::fromMsg(base_link_odom_msg.transform, base_link_odom);
+
+    tf2::Transform map_odom;
+    map_odom.mult(map_base_link, base_link_odom);
+    tf2::Stamped<tf2::Transform> map_odom_stamped(map_odom, ros::Time::now(), "map");
+    geometry_msgs::TransformStamped map_odom_stamped_msg = tf2::toMsg(map_odom_stamped);
+    map_odom_stamped_msg.child_frame_id = "odom";
+
+    transform_broadcaster_.sendTransform(map_odom_stamped_msg);
 }
 
 int main(int argc, char **argv)

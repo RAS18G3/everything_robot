@@ -13,6 +13,8 @@
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "tf2_ros/transform_broadcaster.h"
+#include "tf2_ros/transform_listener.h"
 
 #include <string>
 #include <vector>
@@ -31,6 +33,7 @@ private:
   bool reset_localization_cb(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response );
   void reset_localization();
   void publish_particles();
+  void publish_transform();
   void odometry_cb(const nav_msgs::Odometry::ConstPtr& msg);
   void laser_scan_cb(const sensor_msgs::LaserScan::ConstPtr& msg);
   void measurement_update(const sensor_msgs::LaserScan::ConstPtr& laser_scan_msg);
@@ -54,6 +57,9 @@ private:
   ros::Subscriber laser_scan_subscriber_;
   ros::Rate loop_rate_;
   ros::ServiceServer reset_localization_service_;
+  tf2_ros::TransformBroadcaster transform_broadcaster_;
+  tf2_ros::Buffer transform_buffer_;
+  tf2_ros::TransformListener transform_listener_;
 
   nav_msgs::OccupancyGrid current_map_;
   nav_msgs::Odometry::ConstPtr last_odometry_msg_;

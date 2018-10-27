@@ -8,6 +8,7 @@
 #include "nav_msgs/OccupancyGrid.h"
 #include "std_srvs/Trigger.h"
 #include "geometry_msgs/PoseArray.h"
+#include "sensor_msgs/LaserScan.h"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
@@ -29,6 +30,7 @@ private:
   bool reset_localization(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response );
   void publish_particles();
   void odometry_cb(const nav_msgs::Odometry::ConstPtr& msg);
+  void laser_scan_cb(const sensor_msgs::LaserScan::ConstPtr& msg);
 
   // Type definitions
   struct Particle {
@@ -51,9 +53,10 @@ private:
   nav_msgs::Odometry::ConstPtr last_odometry_msg_;
 
   // Particle filter member variables
-  State current_state_;
+  State current_state_; // this will keep track of whether the robot is localized, in which case mapping can be done
   std::vector<Particle> particles_;
-  int particles_per_m2_;
+  int particles_per_m2_; // to calculate how many particles to generate based on map size
+  int beam_count_; // to reduce the computational load, this is the maximum number of beams to be used
   double alpha_rot_rot_, alpha_rot_trans_, alpha_trans_rot_, alpha_trans_trans_;
 
 };

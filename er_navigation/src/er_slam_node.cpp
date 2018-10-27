@@ -19,12 +19,15 @@ SLAMNode::~SLAMNode() {
 void SLAMNode::init_node() {
   std::string map_path;
   std::string odometry_topic;
+  std::string laser_scan_topic;
   std::string node_name = ros::this_node::getName();
 
   // read params
   ros::param::param<std::string>("~map_file", map_path, "");
   ros::param::param<int>("~particles_per_m2", particles_per_m2_, 20);
+  ros::param::param<int>("~beam_count", beam_count_, 8);
   ros::param::param<std::string>("~odometry_topic", odometry_topic, "/wheel_odometry");
+  ros::param::param<std::string>("~laser_scan_topic", laser_scan_topic, "/scan");
   ros::param::param<double>("~alpha_trans_trans", alpha_trans_trans_, 0.001);
   ros::param::param<double>("~alpha_trans_rot", alpha_trans_rot_, 0.00001);
   ros::param::param<double>("~alpha_rot_trans", alpha_rot_trans_, 0.000000001);
@@ -36,6 +39,7 @@ void SLAMNode::init_node() {
   particles_publisher_ = nh_.advertise<geometry_msgs::PoseArray>(node_name + "/particles", 1);
 
   odometry_subscriber_ = nh_.subscribe<nav_msgs::Odometry>(odometry_topic, 1, &SLAMNode::odometry_cb, this);
+  odometry_subscriber_ = nh_.subscribe<>(laser_scan_topic, 1, &SLAMNode::laser_scan_cb, this);
 
   current_map_ = map_reader.occupancy_grid();
 
@@ -166,6 +170,11 @@ void SLAMNode::odometry_cb(const nav_msgs::Odometry::ConstPtr& msg) {
     ROS_INFO_STREAM("Prediction time: " << (ros::WallTime::now()-start_time).toSec());
   }
   last_odometry_msg_ = msg;
+}
+
+
+void SLAMNode::laser_scan_cb(const sensor_msgs::LaserScan::ConstPtr& msg) {
+  ROS_INFO("received scan");
 }
 
 int main(int argc, char **argv)

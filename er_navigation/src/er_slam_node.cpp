@@ -15,7 +15,7 @@ double evaluate_gaussian(double x, double sigma, double mu=0) {
   return std::exp( - std::pow(x - mu, 2) / (2 * sigma * sigma) ) / (sigma * std::sqrt(2*M_PI));
 }
 
-SLAMNode::SLAMNode() : nh_(), loop_rate_(10), current_state_(None), last_odometry_msg_(nullptr), transform_listener_(transform_buffer_) {
+SLAMNode::SLAMNode() : nh_(), loop_rate_(1), current_state_(None), transform_listener_(transform_buffer_) {
 
 }
 
@@ -64,10 +64,20 @@ void SLAMNode::run_node() {
   while(ros::ok()) {
     ros::spinOnce(); // this will handle service calls and handle all the subscriber callbacks
 
-    map_publisher_.publish(current_map_);
-    publish_particles();
 
-    publish_transform();
+    if (current_laser_scan_msg_ != nullptr) {
+      update_step_time_ = current_laser_scan_msg_->header.stamp;
+
+      if(motion_update()) {
+        measurement_update();
+        publish_particles();
+        publish_transform();
+      }
+
+    }
+
+    map_publisher_.publish(current_map_);
+
 
     loop_rate_.sleep();
 
@@ -139,119 +149,139 @@ void SLAMNode::publish_particles() {
 void SLAMNode::odometry_cb(const nav_msgs::Odometry::ConstPtr& msg) {
   // first check if there is a previous odometry msg
   // we will use the position difference to that to calculate the movement between two odometry messages
-  if (last_odometry_msg_ != nullptr) {
-    // measure time of this callback
-    ros::WallTime start_time = ros::WallTime::now();
-
-    // extract 2d position and orientation (where was the robot in previous odometry msg, where is it in the current one)
-    // TODO: any nicer way of doing this? probably lots of unnecessary computations done here...
-    double x2 = msg->pose.pose.position.x, y2=msg->pose.pose.position.y;
-    double x1 = last_odometry_msg_->pose.pose.position.x, y1=last_odometry_msg_->pose.pose.position.y;
-    tf2::Quaternion orientation2, orientation1;
-    tf2::fromMsg(msg->pose.pose.orientation, orientation2);
-    tf2::fromMsg(last_odometry_msg_->pose.pose.orientation, orientation1);
-    tf2::Matrix3x3 rotation_matrix2(orientation2);
-    tf2::Matrix3x3 rotation_matrix1(orientation1);
-    double roll2, pitch2, yaw2, roll1, pitch1, yaw1;
-    rotation_matrix2.getRPY(roll2, pitch2, yaw2);
-    rotation_matrix1.getRPY(roll1, pitch1, yaw1);
-
-    // algorithm from p. 136, Probabilistic Robotics
-    double delta_rot1 = std::atan2(y2-y1, x2-x1) - yaw1;
-    double delta_trans = std::sqrt( std::pow(x2 - x1, 2) + std::pow(y2 - y1, 2) );
-    double delta_rot2 = yaw2 - yaw1 - delta_rot1;
-
-    // create noise generators
-    std::default_random_engine generator;
-    std::normal_distribution<double> rot1_noise(0,std::sqrt( alpha_rot_rot_ * std::pow(delta_rot1,2) + alpha_trans_rot_ * std::pow(delta_trans,2)));
-    std::normal_distribution<double> trans_noise(0,std::sqrt( alpha_rot_trans_ * ( std::pow(delta_rot1,2) + std::pow(delta_rot2,2) ) + alpha_trans_trans_ * std::pow(delta_trans,2)));
-    std::normal_distribution<double> rot2_noise(0,std::sqrt( alpha_rot_rot_ * std::pow(delta_rot2,2) + alpha_trans_rot_ * std::pow(delta_trans,2)));
-
-    double delta_rot1_hat, delta_rot2_hat, delta_trans_hat;
-    for(auto it = particles_.begin(); it != particles_.end(); ++it) {
-      // add different noise for every particle
-      delta_rot1_hat = delta_rot1 + rot1_noise(generator);
-      delta_trans_hat = delta_trans + trans_noise(generator);
-      delta_rot2_hat = delta_rot2 + rot2_noise(generator);
-
-      // update the particle
-      it->x = it->x + delta_trans_hat*cos(it->theta + delta_rot1_hat);
-      it->y = it->y + delta_trans_hat*sin(it->theta + delta_rot1_hat);
-      it->theta = it->theta + delta_rot1_hat + delta_rot2_hat;
-      fix_angle(it->theta);
-    }
-
-    ROS_INFO_STREAM("Prediction time: " << (ros::WallTime::now()-start_time).toSec());
-  }
-  last_odometry_msg_ = msg;
+  /*current_odomotry_msg_ = msg;
+  last_odometry_msg_ = current_odomotry_msg_;*/
 }
 
 void SLAMNode::laser_scan_cb(const sensor_msgs::LaserScan::ConstPtr& msg) {
-  measurement_update(msg);
+  current_laser_scan_msg_ = msg;
 }
 
-void SLAMNode::measurement_update(const sensor_msgs::LaserScan::ConstPtr& laser_scan_msg) {
-  ros::WallTime start_time = ros::WallTime::now();
+bool SLAMNode::motion_update() {
+    // only do full updates
+    if (current_laser_scan_msg_ != nullptr) {
+      // measure time of this callback
+      ros::WallTime start_time = ros::WallTime::now();
 
-  // TEMP FIX
-  // TODO: use TF to get the transform between base_link and frame_id of laser_scan_msg and calculate the offset based on that
-  const double lidar_angle = M_PI;
-  const double lidar_x = 0.03;
-  const double lidar_y = 0;
+      last_odometry_msg_ = std::move(current_odomotry_msg_);
+      try {
+        current_odomotry_msg_ = transform_buffer_.lookupTransform("odom", "base_link", update_step_time_);
+      }
+      catch (tf2::TransformException &ex) {
+        ROS_WARN("%s",ex.what());
+        return false;
+      }
+      if(last_odometry_msg_.header.frame_id == "")
+        return false;
 
-  // first find the laser beams to use
-  // the data will be inf in random placces (every 2nd, but sometimes even or odd indices)
-  // and we want to maximally use beam_count_ laser beams, optimally equally distributed
-  struct LaserScan {
-    double range, angle;
-    LaserScan(double r, double a) : range(r), angle(a) {};
-  };
-  std::vector<LaserScan> laser_scans;
+      // extract 2d position and orientation (where was the robot in previous odometry msg, where is it in the current one)
+      // TODO: any nicer way of doing this? probably lots of unnecessary computations done here...
+      double x2 = current_odomotry_msg_.transform.translation.x, y2=current_odomotry_msg_.transform.translation.y;
+      double x1 = last_odometry_msg_.transform.translation.x, y1=last_odometry_msg_.transform.translation.y;
+      tf2::Quaternion orientation2, orientation1;
+      tf2::fromMsg(current_odomotry_msg_.transform.rotation, orientation2);
+      tf2::fromMsg(last_odometry_msg_.transform.rotation, orientation1);
+      tf2::Matrix3x3 rotation_matrix2(orientation2);
+      tf2::Matrix3x3 rotation_matrix1(orientation1);
+      double roll2, pitch2, yaw2, roll1, pitch1, yaw1;
+      rotation_matrix2.getRPY(roll2, pitch2, yaw2);
+      rotation_matrix1.getRPY(roll1, pitch1, yaw1);
 
-  // e.g. if there are 100 beams, and we want 2 beams, this way we will skip 49 indices, and take the next feasible
-  // measurement starting at 50 (because we increase the index once more in the for loop)
+      // algorithm from p. 136, Probabilistic Robotics
+      double delta_rot1 = std::atan2(y2-y1, x2-x1) - yaw1;
+      double delta_trans = std::sqrt( std::pow(x2 - x1, 2) + std::pow(y2 - y1, 2) );
+      double delta_rot2 = yaw2 - yaw1 - delta_rot1;
 
-  int skip = laser_scan_msg->ranges.size() / beam_count_ - 1;
-  skip = skip < 0? 0 : skip;
+      // create noise generators
+      std::default_random_engine generator;
+      std::normal_distribution<double> rot1_noise(0,std::sqrt( alpha_rot_rot_ * std::pow(delta_rot1,2) + alpha_trans_rot_ * std::pow(delta_trans,2)));
+      std::normal_distribution<double> trans_noise(0,std::sqrt( alpha_rot_trans_ * ( std::pow(delta_rot1,2) + std::pow(delta_rot2,2) ) + alpha_trans_trans_ * std::pow(delta_trans,2)));
+      std::normal_distribution<double> rot2_noise(0,std::sqrt( alpha_rot_rot_ * std::pow(delta_rot2,2) + alpha_trans_rot_ * std::pow(delta_trans,2)));
 
-  for(int i = 0; i < laser_scan_msg->ranges.size(); ++i) {
-    double range = laser_scan_msg->ranges[i];
-    if(!std::isinf(range) && range <= laser_scan_msg->range_max && range >= laser_scan_msg->range_min) {
-      double angle =  laser_scan_msg->angle_min + i * laser_scan_msg->angle_increment + lidar_angle;
-      fix_angle(angle);
-      laser_scans.emplace_back(range, angle);
-      i += skip; // we might end up with less than beam_count readings, but only if lots of readings are shitty anyways
+      double delta_rot1_hat, delta_rot2_hat, delta_trans_hat;
+      for(auto it = particles_.begin(); it != particles_.end(); ++it) {
+        // add different noise for every particle
+        delta_rot1_hat = delta_rot1 + rot1_noise(generator);
+        delta_trans_hat = delta_trans + trans_noise(generator);
+        delta_rot2_hat = delta_rot2 + rot2_noise(generator);
+
+        // update the particle
+        it->x = it->x + delta_trans_hat*cos(it->theta + delta_rot1_hat);
+        it->y = it->y + delta_trans_hat*sin(it->theta + delta_rot1_hat);
+        it->theta = it->theta + delta_rot1_hat + delta_rot2_hat;
+        fix_angle(it->theta);
+      }
+
+      ROS_INFO_STREAM("Prediction time: " << (ros::WallTime::now()-start_time).toSec());
+      return true;
     }
-  }
+}
 
-  ROS_DEBUG_STREAM("Scan...");
-  for(auto it = laser_scans.begin(); it != laser_scans.end(); ++it) {
-    ROS_DEBUG_STREAM(it->range << " " << it->angle);
-  }
+void SLAMNode::measurement_update() {
+  // only do full updates
+  if (current_laser_scan_msg_ != nullptr) {
+    ros::WallTime start_time = ros::WallTime::now();
 
-  // for each particle, compare the expected measurement to the actual measurement
-  for(auto particles_it = particles_.begin(); particles_it != particles_.end(); ++particles_it) {
-    for(auto laser_it = laser_scans.begin(); laser_it != laser_scans.end(); ++laser_it) {
-      // offset the particle based on the lidar position
-      double x = particles_it->x + lidar_x * cos(particles_it->theta) + lidar_y * sin(particles_it->theta);
-      double y = particles_it->y + lidar_x * sin(particles_it->theta) + lidar_y * cos(particles_it->theta);
+    // TEMP FIX
+    // TODO: use TF to get the transform between base_link and frame_id of current_laser_scan_msg_ and calculate the offset based on that
+    const double lidar_angle = M_PI;
+    const double lidar_x = 0.03;
+    const double lidar_y = 0;
 
-      // calculate laser angle in global reference frame
-      double laser_angle = particles_it->theta + laser_it->angle;
-      fix_angle(laser_angle);
+    // first find the laser beams to use
+    // the data will be inf in random placces (every 2nd, but sometimes even or odd indices)
+    // and we want to maximally use beam_count_ laser beams, optimally equally distributed
+    struct LaserScan {
+      double range, angle;
+      LaserScan(double r, double a) : range(r), angle(a) {};
+    };
+    std::vector<LaserScan> laser_scans;
 
-      // check what's the expected range
-      double range_expected = ray_cast(current_map_, x, y, laser_angle);
-      double range_error = laser_it->range - range_expected;
+    // e.g. if there are 100 beams, and we want 2 beams, this way we will skip 49 indices, and take the next feasible
+    // measurement starting at 50 (because we increase the index once more in the for loop)
 
-      // adjust the weight of the particle based on how likely that measurement is
-      particles_it->weight *= (evaluate_gaussian(range_error, laser_sigma_) + 0.2);
+    int skip = current_laser_scan_msg_->ranges.size() / beam_count_ - 1;
+    skip = skip < 0? 0 : skip;
+
+    for(int i = 0; i < current_laser_scan_msg_->ranges.size(); ++i) {
+      double range = current_laser_scan_msg_->ranges[i];
+      if(!std::isinf(range) && range <= current_laser_scan_msg_->range_max && range >= current_laser_scan_msg_->range_min) {
+        double angle =  current_laser_scan_msg_->angle_min + i * current_laser_scan_msg_->angle_increment + lidar_angle;
+        fix_angle(angle);
+        laser_scans.emplace_back(range, angle);
+        i += skip; // we might end up with less than beam_count readings, but only if lots of readings are shitty anyways
+      }
     }
-  }
 
-  // resample
-  resample();
-  ROS_INFO_STREAM("Measurement time: " << (ros::WallTime::now()-start_time).toSec());
+    ROS_DEBUG_STREAM("Scan...");
+    for(auto it = laser_scans.begin(); it != laser_scans.end(); ++it) {
+      ROS_DEBUG_STREAM(it->range << " " << it->angle);
+    }
+
+    // for each particle, compare the expected measurement to the actual measurement
+    for(auto particles_it = particles_.begin(); particles_it != particles_.end(); ++particles_it) {
+      for(auto laser_it = laser_scans.begin(); laser_it != laser_scans.end(); ++laser_it) {
+        // offset the particle based on the lidar position
+        double x = particles_it->x + lidar_x * cos(particles_it->theta) + lidar_y * sin(particles_it->theta);
+        double y = particles_it->y + lidar_x * sin(particles_it->theta) + lidar_y * cos(particles_it->theta);
+
+        // calculate laser angle in global reference frame
+        double laser_angle = particles_it->theta + laser_it->angle;
+        fix_angle(laser_angle);
+
+        // check what's the expected range
+        double range_expected = ray_cast(current_map_, x, y, laser_angle);
+        double range_error = laser_it->range - range_expected;
+
+        // adjust the weight of the particle based on how likely that measurement is
+        particles_it->weight *= (evaluate_gaussian(range_error, laser_sigma_) + 0.2);
+      }
+    }
+
+    // resample
+    resample();
+    ROS_INFO_STREAM("Measurement time: " << (ros::WallTime::now()-start_time).toSec());
+  }
 }
 
 void SLAMNode::resample() {
@@ -309,7 +339,7 @@ void SLAMNode::publish_transform() {
     // get the most up-to-date odom->base_link transform
     geometry_msgs::TransformStamped base_link_odom_msg;
     try {
-      base_link_odom_msg = transform_buffer_.lookupTransform("base_link", "odom", ros::Time(0));
+      base_link_odom_msg = transform_buffer_.lookupTransform("base_link", "odom", update_step_time_);
     }
     catch (tf2::TransformException &ex) {
       ROS_WARN("%s",ex.what());
@@ -320,7 +350,7 @@ void SLAMNode::publish_transform() {
 
     tf2::Transform map_odom;
     map_odom.mult(map_base_link, base_link_odom);
-    tf2::Stamped<tf2::Transform> map_odom_stamped(map_odom, ros::Time::now(), "map");
+    tf2::Stamped<tf2::Transform> map_odom_stamped(map_odom, update_step_time_, "map");
     geometry_msgs::TransformStamped map_odom_stamped_msg = tf2::toMsg(map_odom_stamped);
     map_odom_stamped_msg.child_frame_id = "odom";
 

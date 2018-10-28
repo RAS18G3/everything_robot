@@ -36,7 +36,8 @@ private:
   void publish_transform();
   void odometry_cb(const nav_msgs::Odometry::ConstPtr& msg);
   void laser_scan_cb(const sensor_msgs::LaserScan::ConstPtr& msg);
-  void measurement_update(const sensor_msgs::LaserScan::ConstPtr& laser_scan_msg);
+  bool motion_update();
+  void measurement_update();
   void resample();
 
   // Type definitions
@@ -62,7 +63,11 @@ private:
   tf2_ros::TransformListener transform_listener_;
 
   nav_msgs::OccupancyGrid current_map_;
-  nav_msgs::Odometry::ConstPtr last_odometry_msg_;
+  geometry_msgs::TransformStamped current_odomotry_msg_;
+  geometry_msgs::TransformStamped last_odometry_msg_;
+  sensor_msgs::LaserScan::ConstPtr current_laser_scan_msg_;
+
+  ros::Time update_step_time_;
 
   // Particle filter member variables
   State current_state_; // this will keep track of whether the robot is localized, in which case mapping can be done

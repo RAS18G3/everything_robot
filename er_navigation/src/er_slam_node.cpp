@@ -274,6 +274,9 @@ void SLAMNode::measurement_update() {
         double range_error = laser_it->range - range_expected;
 
         // adjust the weight of the particle based on how likely that measurement is
+        // 0.2 is to add a given probability for it to be an outlier
+        // this way a single very bad measurement will not completely destroy the particle
+        // not really mathematical but seems to work well
         particles_it->weight *= (evaluate_gaussian(range_error, laser_sigma_) + 0.2);
       }
     }

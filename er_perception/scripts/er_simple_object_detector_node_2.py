@@ -9,10 +9,12 @@ from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 
 ##### Global variables ##################
-SATURATION_THRESHOLD = 200 # decrease if red/orange/green/blue/yellow are not recognized
-VIOLET_HUE_LOW = 120 # increase the violet range if violet is not recognized
-VIOLET_HUE_HIGH = 140
-VIOLET_SATURATION = 50 # decrease if violet is not recognized
+SATURATION_THRESHOLD = 180 # decrease if red/orange/green/blue/yellow are not recognized
+VIOLET_HUE_LOW = 115 # increase the violet range if violet is not recognized
+VIOLET_HUE_HIGH = 145
+VIOLET_SATURATION = 40 # decrease if violet is not recognized
+W_MIN = 35
+H_MIN = 35
 # do the opposite if there are too many false positives
 
 DEBUG = False
@@ -64,7 +66,7 @@ class simple_object_detector_node:
         thresh5 = cv2.bitwise_or(thresh1, thresh4)
 
         # first dilate and then erode, this will merge bounding boxes which are close
-        thresh5 = cv2.dilate(thresh5, cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10)), iterations=3)
+        thresh5 = cv2.dilate(thresh5, cv2.getStructuringElement(cv2.MORPH_RECT, (20, 20)), iterations=3)
         thresh5 = cv2.erode(thresh5, cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10)), iterations=2)
 
         if DEBUG:
@@ -79,7 +81,7 @@ class simple_object_detector_node:
         _, contours, hierarchy = cv2.findContours(thresh5, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE)
 
         if DEBUG:
-            rospy.loginfo(contours)
+            rospy.logdebug(contours)
 
         # find the bounding boxes
         rectangles = []
@@ -89,10 +91,12 @@ class simple_object_detector_node:
 
         if DEBUG:
             # draw the bounding boxes and contours on the image
-            cv2.drawContours(img, contours, -1, (255, 255, 0), 3)
+            #cv2.drawContours(img, contours, -1, (255, 255, 0), 3)
             for rectangle in rectangles:
-                cv2.rectangle(img, (rectangle[0], rectangle[1]), (rectangle[0] + rectangle[2], rectangle[1] + rectangle[3]),
-                (0, 255, 0), 2)
+                (x,y,w,h) = rectangle
+                if w >= W_MIN and  h >= H_MIN:
+                    cv2.rectangle(img, (rectangle[0], rectangle[1]), (rectangle[0] + rectangle[2], rectangle[1] + rectangle[3]),
+                    (0, 255, 0), 2)
             cv2.imshow('image', img)
             cv2.waitKey(1)
 
@@ -103,10 +107,11 @@ class simple_object_detector_node:
         bounding_box_msg = UInt16MultiArray()
         for box in rectangles:
             (x,y,w,h) = box
-            bounding_box_msg.data.append(x)
-            bounding_box_msg.data.append(y)
-            bounding_box_msg.data.append(w)
-            bounding_box_msg.data.append(h)
+            if w >= W_MIN and  h >= H_MIN:
+                bounding_box_msg.data.append(x)
+                bounding_box_msg.data.append(y)
+                bounding_box_msg.data.append(w)
+                bounding_box_msg.data.append(h)
 
         self.box_publisher.publish(bounding_box_msg)
 

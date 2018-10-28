@@ -15,7 +15,7 @@ double evaluate_gaussian(double x, double sigma, double mu=0) {
   return std::exp( - std::pow(x - mu, 2) / (2 * sigma * sigma) ) / (sigma * std::sqrt(2*M_PI));
 }
 
-SLAMNode::SLAMNode() : nh_(), loop_rate_(1), current_state_(None), transform_listener_(transform_buffer_) {
+SLAMNode::SLAMNode() : nh_(), loop_rate_(5), current_state_(None), transform_listener_(transform_buffer_) {
 
 }
 

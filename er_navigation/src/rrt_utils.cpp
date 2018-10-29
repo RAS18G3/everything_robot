@@ -1,6 +1,11 @@
-// NOT FUNCTIONAL!
-// define "point" type
-// get proper #includes
+#ifndef THRESHOLD
+#define THRESHOLD 50
+#endif
+
+#include "rrt_utils.h"
+#include "occupancy_grid_utils.h"
+
+int threshold = THRESHOLD;
 
 double point_dist(double x1, double y1, double x2, double y2)
 // gives estimate of distance between points p1 and p2
@@ -43,15 +48,15 @@ bool point_coll(double x1, double y1, double x2, double y2, nav_msgs::OccupancyG
     // "round" (hm, floor. good enough)
     x = (int) x1;
     y = (int) y1;
-    if (occupancy_grid.data[y*occupancy_grid.info.width + x] > 50)
-    // probably not correct way to read data from the grid
-    // TODO: don't have a hardcoded "50"
+    if (at(occupancy_grid, x, y) > threshold)
     {
       return true;
     }
   }
   return false; // fall through case
 }
+
+//RRTree::RRTree
 
 /*
   rrt class sketch

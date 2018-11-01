@@ -53,4 +53,9 @@
     <param name="min_height" value="-0.015" />
     <param name="range" value="0.005" />
   </node>
+
+  <node name="gripper_node" pkg="rosserial_python" type="serial_node.py" output="screen">
+    <param name="port" value="/dev/ttyACM0" />
+    <param name="baud" value="9600" />
+  </node>
 </launch>

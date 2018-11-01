@@ -118,6 +118,7 @@ else{
      }
    }
   }
+  ROS_INFO_STREAM("goal endpoint " << goal_xarr[1] << " " << goal_yarr[1]);
 
   ROS_INFO("ppppppp %f", p);
   ROS_INFO("goal x %f", goal_x);
@@ -130,8 +131,8 @@ int main(int argc, char **argv){
   near_end = false;
   double horizon = 0.2;
   int p = 0;
-  goal_xarr = {0, 1, 1, 2};
-  goal_yarr = {0, 0, 2, 2};
+  goal_xarr = {0, 1.8, 1.8, 1.8};
+  goal_yarr = {0, 0, -1.8, 0};
 
   ros::init(argc, argv, "drive_node");
 

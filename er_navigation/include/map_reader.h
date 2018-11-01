@@ -16,7 +16,7 @@ public:
   MapReader(std::string path_to_map);
   ~MapReader();
 
-  nav_msgs::OccupancyGrid occupancy_grid() const;
+  nav_msgs::OccupancyGrid occupancy_grid(double margin) const;
 
 private:
   struct Wall {

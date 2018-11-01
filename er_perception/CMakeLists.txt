@@ -24,11 +24,6 @@ include_directories(
   include ${catkin_INCLUDE_DIRS}
 )
 
-add_message_files(
-  FILES
-  object_location.msg
-)
-
 
 
 add_executable(er_pointcloud_to_2d_node src/er_pointcloud_to_2d_node.cpp)

@@ -39,7 +39,7 @@ MapReader::~MapReader() {
 
 }
 
-nav_msgs::OccupancyGrid MapReader::occupancy_grid() const {
+nav_msgs::OccupancyGrid MapReader::occupancy_grid(double margin) const {
   nav_msgs::OccupancyGrid occupancy_grid_msg = nav_msgs::OccupancyGrid();
 
   double max_x = 0;
@@ -63,8 +63,6 @@ nav_msgs::OccupancyGrid MapReader::occupancy_grid() const {
   double height = max_y;
   double resolution = 0.02;
 
-
-  double margin = 0.5;
   int8_t unknown_value = 5;
 
   occupancy_grid_msg.header.frame_id = "/map";

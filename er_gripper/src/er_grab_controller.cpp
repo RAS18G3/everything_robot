@@ -10,18 +10,21 @@ double width;
 double height;
 
 void object_box_callback(const std_msgs::UInt16MultiArray::ConstPtr bounding_box_msg){
-  x = bounding_box_msg.data[object_num+0];
-  y = bounding_box_msg.data[object_num+1];
-  width = bounding_box_msg.data[object_num+2];
-  height = bounding_box_msg.data[object_num+3];
+  x = bounding_box_msg -> data[object_num+0];
+  y = bounding_box_msg -> data[object_num+1];
+  width = bounding_box_msg -> data[object_num+2];
+  height = bounding_box_msg -> data[object_num+3];
 }
 
 int main(int argc, char **argv){
   object_num = 0;
 
+  ros::NodeHandle n;
+
   ros::Subscriber object_box_sub = n.subscribe("object_bounding_boxes", 10, object_box_callback);
   ros::Publisher twist_pub = n.advertise<geometry_msgs::Twist>("/cartesian_motor_controller/twist", 10);
 
+  ros::Rate loop_rate(25);
   while(ros::ok()){
     geometry_msgs::Twist twist_msg;
 

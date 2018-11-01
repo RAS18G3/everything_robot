@@ -1,13 +1,19 @@
 import cv2
 
 ##### Global variables ##################
-SATURATION_THRESHOLD = 200 # decrease if red/orange/green/blue/yellow are not recognized
-VIOLET_HUE_LOW = 120 # increase the violet range if violet is not recognized
-VIOLET_HUE_HIGH = 140
-VIOLET_SATURATION = 50 # decrease if violet is not recognized
+SATURATION_THRESHOLD = 180 # decrease if red/orange/green/blue/yellow are not recognized
+VIOLET_HUE_LOW = 115 # increase the violet range if violet is not recognized
+VIOLET_HUE_HIGH = 145
+VIOLET_SATURATION = 40 # decrease if violet is not recognized
+W_MIN = 35
+H_MIN = 35
 # do the opposite if there are too many false positives
 
 def find_bounding_boxes(img, debug = False):
+    # Apply smoothing to the image
+    # could be worth it to resize, but bounding boxes at the bottom would have to be adjusted!
+    # img = cv2.resize(img, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_CUBIC)
+
     # blur the image to remove potential noise
     img = cv2.blur(img, (5, 5))
 
@@ -27,7 +33,7 @@ def find_bounding_boxes(img, debug = False):
     thresh5 = cv2.bitwise_or(thresh1, thresh4)
 
     # first dilate and then erode, this will merge bounding boxes which are close
-    thresh5 = cv2.dilate(thresh5, cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10)), iterations=3)
+    thresh5 = cv2.dilate(thresh5, cv2.getStructuringElement(cv2.MORPH_RECT, (20, 20)), iterations=3)
     thresh5 = cv2.erode(thresh5, cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10)), iterations=2)
 
     if debug:
@@ -47,14 +53,22 @@ def find_bounding_boxes(img, debug = False):
     for contour in contours:
         rectangles.append(cv2.boundingRect(contour))
 
+    filtered_rectangles = []
+
+    for rectangle in rectangles:
+        (x,y,w,h) = rectangle
+        if w >= W_MIN and  h >= H_MIN:
+            filtered_rectangles.append(rectangle)
 
     if debug:
         # draw the bounding boxes and contours on the image
-        cv2.drawContours(img, contours, -1, (255, 255, 0), 3)
-        for rectangle in rectangles:
-            cv2.rectangle(img, (rectangle[0], rectangle[1]), (rectangle[0] + rectangle[2], rectangle[1] + rectangle[3]),
-            (0, 255, 0), 2)
+        #cv2.drawContours(img, contours, -1, (255, 255, 0), 3)
+        for rectangle in filtered_rectangles:
+            (x,y,w,h) = rectangle
+            cv2.rectangle(img, (rectangle[0], rectangle[1]), (rectangle[0] + rectangle[2], rectangle[1] + rectangle[3]), (0, 255, 0), 2)
         cv2.imshow('image', img)
         cv2.waitKey(1)
 
-    return rectangles
+
+
+    return filtered_rectangles

@@ -1,10 +1,10 @@
 #ifndef RRT_UTILS_H
 #define RRT_UTILS_H
 
-//#include "occupancy_grid_utils.h"
+#include "ros/ros.h"
+#include "nav_msgs/OccupancyGrid.h"
+#include "occupancy_grid_utils.h"
 
-//#include "ros/ros.h"
-//#include "nav_msgs/OccupancyGrid.h"
 /*
 #include <cmath>
 #include <string>
@@ -19,14 +19,15 @@ bool point_coll(); // collision btw 2 pts
 struct RRTree
 {
   int size; // total number of nodes
-  TreeNode** nodes; // array of all the tree nodes
+  std::vector<std::shared_ptr<TreeNode>> nodes; // array of all the tree nodes
   void addNode();
 };
 
 struct TreeNode
 {
   double x, y;
-  int parent, depth;
+  std::shared_ptr<TreeNode> parent;
+  int depth;
 };
 
 #endif

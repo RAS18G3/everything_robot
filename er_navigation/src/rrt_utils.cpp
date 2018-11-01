@@ -5,7 +5,14 @@
 #include "rrt_utils.h"
 #include "occupancy_grid_utils.h"
 
-int threshold = THRESHOLD;
+bool checkMap( double x, double y, nav_msgs::OccupancyGrid &occupancy_grid)
+// returns "occupancy" of the grid, i.e. if prblty of obstacle is >THRESHOLD
+{
+  // basic rounding of indeces (recasting->floor)
+  int x_floor = (int) x;
+  int y_floor = (int) y;
+  return (at(occupancy_grid, x_floor, y_floor) > THRESHOLD);
+}
 
 double point_dist(double x1, double y1, double x2, double y2)
 // gives estimate of distance between points p1 and p2
@@ -43,12 +50,12 @@ bool point_coll(double x1, double y1, double x2, double y2, nav_msgs::OccupancyG
     // short distance -> we are at the goal
     {
       break;
-    }
 
-    // "round" (hm, floor. good enough)
-    x = (int) x1;
-    y = (int) y1;
-    if (at(occupancy_grid, x, y) > threshold)
+    }
+    // basic rounding of indeces (recasting->floor)
+    int x_floor = (int) x1;
+    int y_floor = (int) y1;
+    if (at(occupancy_grid, x_floor, y_floor) > THRESHOLD)
     {
       return true;
     }
@@ -56,20 +63,28 @@ bool point_coll(double x1, double y1, double x2, double y2, nav_msgs::OccupancyG
   return false; // fall through case
 }
 
-//RRTree::RRTree
+RRTree::RRTree()
+{
+  int size = 0;
+  std::vector<std::shared_ptr<TreeNode>> nodes;
 
-/*
-  rrt class sketch
-  class Tree
-    int .size = number of nodes
-    Node[] .nodes = array of node pointers
-                    has to be accessible through index
-                    for easy iteration through all nodes
-  class Node
-    double .posX
-    double .posY
-    Node .parent = pointer to parent node
+  void addNode(double x, double y, std::shared_ptr<TreeNode> parent)
+  {
 
+    nodes.push_back(newNode);
+    size++;
+  }
+}
 
-  idea - could make
-*/
+TreeNode::TreeNode(double xx, double yy, std::shared_ptr<TreeNode> parentNode)
+{
+  double x = xx;
+  double y = yy;
+  int depth = 0;
+  std::shared_ptr<TreeNode> parent = NULL;
+  if(parentNode != NULL)
+  {
+    depth = parentNode.depth + 1;
+    parent = parentNode;
+  }
+}

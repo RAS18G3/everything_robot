@@ -29,12 +29,12 @@ int main(int argc, char **argv){
 
   ros::Subscriber object_box_sub = n.subscribe("object_bounding_boxes", 10, object_box_callback);
   ros::Publisher twist_pub = n.advertise<geometry_msgs::Twist>("/cartesian_motor_controller/twist", 10);
-  ros::Publisher grip_pub = n.advertise<std_msgs::Int64>("grip", 1);
+  //ros::Publisher grip_pub = n.advertise<std_msgs::Int64>("grip", 1);
 
   ros::Rate loop_rate(25);
   while(ros::ok()){
     geometry_msgs::Twist twist_msg;
-    std_msgs::Int16 grip_msg;
+    //std_msgs::Int16 grip_msg;
 
     double object_point = x + (width/2);
     double middle_point = 320;
@@ -45,8 +45,8 @@ int main(int argc, char **argv){
       twist_msg.linear.x = 0;
       twist_msg.angular.z = 0;
 
-      grip_msg.data = 110;
-      grip_pub.publish(grip_msg);
+      //grip_msg.data = 110;
+      //grip_pub.publish(grip_msg);
     }
     else if (std::abs(object_point-middle_point) < sideways_treshold){
       twist_msg.linear.x = 0.1;

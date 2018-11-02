@@ -23,6 +23,9 @@
   <depend>roscpp</depend>
   <depend>tf</depend>
   <depend>tf2</depend>
+  <depend>actionlib_msgs</depend>
+
+  <exec_depend>message_generation</exec_depend>
 
   <export>
 

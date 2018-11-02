@@ -10,11 +10,21 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   nav_msgs
   roscpp
+  actionlib_msgs
+)
+
+add_action_files(
+  DIRECTORY action
+  FILES Path.action
+  )
+
+generate_messages(
+  DEPENDENCIES actionlib_msgs nav_msgs
 )
 
 catkin_package(
  # INCLUDE_DIRS include
-  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp tf tf2
+  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp tf tf2 actionlib_msgs
 )
 
 include_directories(
@@ -31,3 +41,9 @@ add_dependencies(path_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED
 
 target_link_libraries(send_odom ${catkin_LIBRARIES})
 target_link_libraries(path_node ${catkin_LIBRARIES})
+
+
+
+
+
+

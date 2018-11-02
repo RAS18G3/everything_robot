@@ -22,7 +22,8 @@ void draw_line(nav_msgs::OccupancyGrid &occupancy_grid, double x_start, double x
   }
 }
 
-int8_t&  at(nav_msgs::OccupancyGrid &occupancy_grid, int x, int y) {
+int8_t&  at(nav_msgs::OccupancyGrid &occupancy_grid, int x, int y)
+{
   occupancy_grid.data[y*occupancy_grid.info.width + x];
 }
 

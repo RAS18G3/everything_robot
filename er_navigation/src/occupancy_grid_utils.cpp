@@ -22,7 +22,13 @@ void draw_line(nav_msgs::OccupancyGrid &occupancy_grid, double x_start, double x
   }
 }
 
-int8_t&  at(nav_msgs::OccupancyGrid &occupancy_grid, int x, int y) {
+int8_t&  at(nav_msgs::OccupancyGrid &occupancy_grid, int x, int y)
+{
+  // out-of-bounds check - return 100 ("invalid pos")
+  if( x<0 || y<0 || x>occupancy_grid.info.width || y>occupancy_grid.info.height)
+  {
+    return 100;
+  }
   occupancy_grid.data[y*occupancy_grid.info.width + x];
 }
 

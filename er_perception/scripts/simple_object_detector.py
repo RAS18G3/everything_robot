@@ -1,10 +1,10 @@
 import cv2
 
 ##### Global variables ##################
-SATURATION_THRESHOLD = 180 # decrease if red/orange/green/blue/yellow are not recognized
-VIOLET_HUE_LOW = 115 # increase the violet range if violet is not recognized
-VIOLET_HUE_HIGH = 145
-VIOLET_SATURATION = 40 # decrease if violet is not recognized
+SATURATION_THRESHOLD = 170 # decrease if red/orange/green/blue/yellow are not recognized
+VIOLET_HUE_LOW = 110 # increase the violet range if violet is not recognized
+VIOLET_HUE_HIGH = 150
+VIOLET_SATURATION = 35 # decrease if violet is not recognized
 W_MIN = 35
 H_MIN = 35
 # do the opposite if there are too many false positives
@@ -68,7 +68,6 @@ def find_bounding_boxes(img, debug = False):
             cv2.rectangle(img, (rectangle[0], rectangle[1]), (rectangle[0] + rectangle[2], rectangle[1] + rectangle[3]), (0, 255, 0), 2)
         cv2.imshow('image', img)
         cv2.waitKey(1)
-
 
 
     return filtered_rectangles

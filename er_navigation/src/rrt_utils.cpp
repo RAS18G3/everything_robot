@@ -5,8 +5,7 @@
 #include "rrt_utils.h"
 
 double point_dist(double x1, double y1, double x2, double y2)
-// gives estimate of distance between points p1 and p2
-// not true distance but good enough for comparisons
+// gives squared distance between points p1 and p2
 {
   // reusing vars -- with so many calls we might as well be cheap
   x1 -= x2;
@@ -30,19 +29,19 @@ bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> 
   vec_x /= vec_magnitude;
   vec_y /= vec_magnitude;
 
-  while 1
+  while(1)
   {
     // step once along vector
     x1 += vec_x;
     y1 += vec_y;
 
-    if (dist(x1, y1, x2, y2) < 1)
-    // short distance -> we are at the goal
+    if (point_dist(x1, y1, x2, y2) < 1)
+    // short distance . we are at the goal
     {
       break;
 
     }
-    // basic rounding of indeces (recasting->floor)
+    // basic rounding of indeces (recasting.floor)
     int x_floor = (int) x1;
     int y_floor = (int) y1;
     if (map[x_floor + y_floor*width] > THRESHOLD)
@@ -53,69 +52,87 @@ bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> 
   return false; // fall through case
 }
 
-RRTree::RRTree()
-// main RRT object
+void TreeNode::declareNode(double xx, double yy, TreeNode* parentNode)
+// node declaration, separate in case parent==NULL (for rootnode)
 {
-  int size = 0;
-  std::vector<std::shared_ptr<TreeNode>> nodes;
-
-  void addNode(std::shared_ptr<TreeNode> newNode)
+  x = xx;
+  y = yy;
+  if(&parentNode != NULL)
   {
-    nodes.push_back(newNode);
-    size++;
-  }
-};
-
-TreeNode::TreeNode(double xx, double yy, TreeNode parentNode)
-{
-  double x = xx;
-  double y = yy;
-  int depth = 0;
-  TreeNode parent = NULL;
-  if(parentNode != NULL)
-  {
-    depth = parentNode.depth + 1;
+    depth = parentNode->depth + 1;
     parent = parentNode;
   }
-};
+}
 
-int generateNode(RRTree* tree, std::vector<int8_t> map, int width, int height, double xGoal, double yGoal)
-// generate RRT node randomly
-// returns 0 if node has clear path to goal
+void RRTree::addNode(TreeNode* newNode)
+// adds node to the tree
 {
-  int tree_size = tree.size;
+  nodes.push_back(newNode);
+  size++;
+}
 
+int generateNode(RRTree* tree, std::vector<int8_t> map, int width, int height, double x_goal, double y_goal)
+// generate RRT node randomly, returns 1 if succesful
+{
+  int tree_size = tree->size;
+  ROS_INFO("generateNode: before 1st while");
   while(1)
   {
     // generate random x and y
     int x = rand() % width;
     int y = rand() % height;
-
+    double x_node, y_node;
     // calculate distances to all existing nodes
     std::vector<double> dists(tree_size,0);
     for(int i = 0; i<tree_size; i++)
     {
-      x_node = tree.nodes[i].x;
-      y_node = tree.nodes[i].y;
+      x_node = tree->nodes[i]->x;
+      y_node = tree->nodes[i]->y;
       dists[i] = point_dist(x,y,x_node,y_node);
     }
 
     // find closest node and check if there is a path
     while( !dists.empty() )
-      std::vector<int>::iterator closest = std::min_element(std::begin(dists), std::end(dists));
+    {
+      std::vector<double>::iterator closest = std::min_element(std::begin(dists), std::end(dists));
       int closest_index = std::distance(std::begin(dists), closest);
-      x_node = tree.nodes[closest_index].x;
-      y_node = tree.nodes[closest_index].y;
+
+      x_node = tree->nodes[closest_index]->x;
+      y_node = tree->nodes[closest_index]->y;
 
       if ( !point_coll(x, y, x_node, y_node, map, width, height) )
-      // found valid node
+      // found valid node, add it to tree
       {
-        newNode = TreeNode(x_node, y_node, &tree.nodes[closest_index]);
-        tree.addNode(newNode);
-        return point_coll(x_node, y_node, x_goal, y_goal, map, width, height);
+        TreeNode newNode;
+        newNode.declareNode(x_node, y_node, tree->nodes[closest_index]);
+        tree->addNode(&newNode);
+        return 1;
       }
 
       // fall through, erase closest point from list if invalid
       dists.erase(std::begin(dists)+closest_index);
+    }
   }
+  return 0; // this should not happen
+}
+
+nav_msgs::Path unpackPath(RRTree* tree)
+// assumes last node points is at goal and unpacks that path
+{
+  int tree_size = tree->size;
+  TreeNode* currentNode = tree->nodes[tree_size-1];
+  int depth = currentNode->depth;
+
+  nav_msgs::Path path;
+  std::vector<geometry_msgs::PoseStamped> poses(depth);
+
+  while(depth != 0)
+  {
+    depth = currentNode->depth;
+    poses[depth].pose.position.x = currentNode->x;
+    poses[depth].pose.position.x = currentNode->y;
+    currentNode = currentNode->parent;
+  }
+  path.poses = poses;
+  return path;
 }

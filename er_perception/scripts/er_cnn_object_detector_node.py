@@ -10,7 +10,7 @@ import numpy as np
 from simple_object_detector import find_bounding_boxes
 import keras
 
-DEBUG = False
+DEBUG = True
 
 LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
 
@@ -59,17 +59,20 @@ class simple_object_detector_node:
             if idx == 14:
                 continue
 
-            if True:
+            if DEBUG:
                 cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 cv2.putText(img, LABELS[idx] + '({0})'.format(p[0][idx]),(x, y + h/2), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2,cv2.LINE_AA)
-                cv2.imshow('image', img)
-                cv2.waitKey(1)
+
 
 
             bounding_box_msg.data.append(x)
             bounding_box_msg.data.append(y)
             bounding_box_msg.data.append(w)
             bounding_box_msg.data.append(h)
+
+        if DEBUG:
+            cv2.imshow('image', img)
+            cv2.waitKey(1)
 
         self.box_publisher.publish(bounding_box_msg)
 

@@ -5,6 +5,14 @@
 #include <actionlib/client/simple_action_client.h>
 #include "std_msgs/Float64MultiArray.h"
 
+/*EXAMPLE HOW TO PUBLISH A PATH IN TERMINAL:
+rostopic pub /path_msg std_msgs/Float64MultiArray "layout:                                                        dim:
+  - label: ''
+    size: 1234
+    stride: 1
+  data_offset: 0
+data: [0.0, 0.0, 1.0, 1.0]" */
+
 typedef actionlib::SimpleActionClient<er_planning::PathAction> Client;
 bool stop;
 
@@ -34,16 +42,3 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(10);
   ros::spin();
 }
-
-/*int main(int argc, char **argv)
-{
-  ros::init(argc, argv, "path_node");
-  Client client("path", true);
-  client.waitForServer();
-  er_planning::PathGoal goal_path;
-  std::vector<float> x = {0, 0, 2, 0, 2, 2, 2, 3};
-  goal_path.Path = x;
-  client.sendGoal(goal_path);
-  client.waitForResult(ros::Duration(5.0));
-  return 0;
-}*/

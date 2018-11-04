@@ -157,7 +157,7 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
 
   ros::NodeHandle n;
 
-  ros::Subscriber odom_sub = n.subscribe("wheel_odometry", 10, odom_callback);
+  //ros::Subscriber odom_sub = n.subscribe("wheel_odometry", 10, odom_callback);
   ros::Subscriber obstacle_sub = n.subscribe("obstacle", 10, obst_callback);
   ros::Publisher twist_pub = n.advertise<geometry_msgs::Twist>("/cartesian_motor_controller/twist", 10);
 
@@ -166,12 +166,12 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
   ros::Rate loop_rate(25);
   geometry_msgs::Twist twist_msg;
 //TRANSAFORM
-  //tf2_ros::Buffer tfBuffer;
-  //tf2_ros::TransformListener tfListener(tfBuffer);
+  tf2_ros::Buffer tfBuffer;
+  tf2_ros::TransformListener tfListener(tfBuffer);
 
   while(ros::ok()){
     //TRANSFORM
-  /*  geometry_msgs::TransformStamped transformStamped;
+  geometry_msgs::TransformStamped transformStamped;
     try{
       transformStamped = tfBuffer.lookupTransform("odom","base_link", ros::Time(0));
     }
@@ -179,7 +179,9 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
       ROS_WARN("%s",ex.what());
       ros::Duration(1.0).sleep();
       continue;
-    }*/
+    }
+
+    get_odom(transformStamped);
 
     //finds current goal point goal_x and goal_y
     find_goto_point(horizon, p);

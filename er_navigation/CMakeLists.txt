@@ -7,13 +7,14 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   tf2
   geometry_msgs
+  er_planning
 )
 
 add_compile_options(-std=c++11)
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp nav_msgs tf tf2 geometry_msgs
+  CATKIN_DEPENDS roscpp nav_msgs tf tf2 geometry_msgs er_planning
 )
 
 include_directories(

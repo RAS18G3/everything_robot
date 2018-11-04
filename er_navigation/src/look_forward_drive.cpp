@@ -10,6 +10,8 @@
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include <er_planning/PathAction.h>
+#include <actionlib/server/simple_action_server.h>
 
 double odom_x;
 double odom_y;
@@ -20,47 +22,11 @@ double goal_y;
 std::vector<double> goal_xarr;
 std::vector<double> goal_yarr;
 
-
+typedef actionlib::SimpleActionServer<er_planning::PathAction> Server;
 
 bool stop;
 bool forward;
 bool near_end;
-//int p;
-
-
-void path_callback(const nav_msgs::Path::ConstPtr path_msg){
-  //now the path is always 3 poses
-  geometry_msgs::PoseStamped poseSt;
-
-  for(int i = 0; i <= 3 ; i++){
-  poseSt = path_msg -> poses[i];
-
-  goal_xarr.push_back(poseSt.pose.position.x);
-  goal_yarr.push_back(poseSt.pose.position.y);
-}
-}
-
-void odom_callback(const nav_msgs::Odometry::ConstPtr odom_msg){
-
-  odom_x = odom_msg -> pose.pose.position.x;
-  odom_y = odom_msg -> pose.pose.position.y;
-
-
-  double roll, pitch;
-  tf2::Quaternion quaternion;
-  tf2::fromMsg(odom_msg->pose.pose.orientation, quaternion);
-  tf2::Matrix3x3 rotation_matrix(quaternion);
-  rotation_matrix.getRPY(roll, pitch, odom_w);
-
-}
-
-int sign(double x) {
-  return x>0 ? 1 : -1;
-}
-
-void obst_callback(const std_msgs::Bool::ConstPtr& obst_msg){
-  stop = obst_msg->data;
-}
 
 void find_goto_point(double horizon, int p){
   if(near_end == true){
@@ -120,51 +86,64 @@ else{
   }
   ROS_INFO_STREAM("goal endpoint " << goal_xarr[1] << " " << goal_yarr[1]);
 
-  ROS_INFO("ppppppp %f", p);
+
   ROS_INFO("goal x %f", goal_x);
   ROS_INFO("goal y %f", goal_y);
 }
 
-int main(int argc, char **argv){
+void odom_callback(const nav_msgs::Odometry::ConstPtr odom_msg){
+
+  odom_x = odom_msg -> pose.pose.position.x;
+  odom_y = odom_msg -> pose.pose.position.y;
+
+
+  double roll, pitch;
+  tf2::Quaternion quaternion;
+  tf2::fromMsg(odom_msg->pose.pose.orientation, quaternion);
+  tf2::Matrix3x3 rotation_matrix(quaternion);
+  rotation_matrix.getRPY(roll, pitch, odom_w);
+
+}
+
+int sign(double x) {
+  return x>0 ? 1 : -1;
+}
+
+void obst_callback(const std_msgs::Bool::ConstPtr& obst_msg){
+  stop = obst_msg->data;
+}
+
+void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
+  std::vector<float> path = goal -> Path;
+  bool last_was_y = true;
+  for(int i = 0; i < path.size(); i++){
+    if(last_was_y){
+      goal_yarr.push_back(path.at(i));
+      last_was_y = false;
+  }
+    else{
+      goal_xarr.push_back(path.at(i));
+      last_was_y = true;
+    }
+  }
 
   stop = false;
   near_end = false;
   double horizon = 0.2;
   int p = 0;
-  goal_xarr = {0, 1.8, 1.8, 1.8};
-  goal_yarr = {0, 0, -1.8, 0};
-
-  ros::init(argc, argv, "drive_node");
 
   ros::NodeHandle n;
 
-  tf::TransformListener transformlistner;
-
   ros::Subscriber odom_sub = n.subscribe("wheel_odometry", 10, odom_callback);
-  ros::Subscriber path_sub = n.subscribe("path", 10, path_callback);
   ros::Subscriber obstacle_sub = n.subscribe("obstacle", 10, obst_callback);
-  ros::Publisher twist_pub = n.advertise<geometry_msgs::Twist>("/cartesian_motor_controller/twist", 10); //maybe the topic has another name
-
+  ros::Publisher twist_pub = n.advertise<geometry_msgs::Twist>("/cartesian_motor_controller/twist", 10);
 
   ros::Rate loop_rate(25);
   geometry_msgs::Twist twist_msg;
   while(ros::ok()){
     find_goto_point(horizon, p);
 
-    std_msgs::Bool new_point_msg;
-
-    tf::StampedTransform transform;
-    try{
-      transformlistner.lookupTransform("base_link", "map", ros::Time(0), transform);
-    }
-    catch(tf::TransformException ex){
-      ROS_WARN("%s", ex.what());
-      ros::Duration(0.1).sleep();
-    }
-
-
     if(stop && forward){
-      //TEST THIS
       ROS_INFO("stop");
       twist_msg.linear.x = 0;
       twist_msg.linear.y = 0;
@@ -201,6 +180,8 @@ int main(int argc, char **argv){
         twist_msg.angular.z = 0;
 
         forward = false;
+
+        as->setSucceeded();
       }
       else if(std::abs(diff) > 0.2){
         ROS_INFO("spinning");
@@ -208,7 +189,7 @@ int main(int argc, char **argv){
         ROS_INFO("diff %f", (diff)*57.32);
         ROS_INFO("abs %f ", std::abs(diff));
         ROS_INFO("distance %f \n", distance_goal);
-        //ROS_INFO("angular velocity %f \n", 0.75*sign(angle_to_point-odom_w));
+
 
         twist_msg.linear.x = 0;
         twist_msg.linear.y = 0;
@@ -236,7 +217,15 @@ int main(int argc, char **argv){
 
     ros::spinOnce();
 
-    loop_rate.sleep();
-  }
+    loop_rate.sleep();}
+}
 
+
+int main(int argc, char **argv){
+  ros::init(argc, argv, "look_forward_drive");
+  ros::NodeHandle nh;
+  Server server(nh, "path", boost::bind(&execute, _1, &server), false);
+  server.start();
+  ros::spin();
+  return 0;
 }

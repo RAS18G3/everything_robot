@@ -1,33 +1,20 @@
 #include "ros/ros.h"
-#include "nav_msgs/Odometry.h"
-#include "std_msgs/Bool.h"
+#include "nav_msgs/Path.h"
+#include "geometry_msgs/PoseStamped.h"
+#include <er_planning/PathAction.h>
+#include <actionlib/client/simple_action_client.h>
+
+typedef actionlib::SimpleActionClient<er_planning::PathAction> Client;
 
 int main(int argc, char **argv)
 {
-float x = 1;
-float y = 1;
-
-
   ros::init(argc, argv, "path_node");
-
-  ros::NodeHandle n;
-
-  ros::Publisher path_pub = n.advertise<nav_msgs::Odometry>("path", 10);
-  ros::Rate loop_rate(10);
-
-
-  while(ros::ok()){
-    nav_msgs::Odometry msg;
-
-    msg.pose.pose.position.x = x;
-    msg.pose.pose.position.y = y;
-
-    path_pub.publish(msg);
-
-    ros::spinOnce();
-
-    loop_rate.sleep();
-  }
-
+  Client client("path", true);
+  client.waitForServer();
+  er_planning::PathGoal goal_path;
+  std::vector<float> x = {0, 0, 2, 0, 2, 2, 2, 3};
+  goal_path.Path = x;
+  client.sendGoal(goal_path);
+  client.waitForResult(ros::Duration(5.0));
   return 0;
 }

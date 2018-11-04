@@ -12,21 +12,19 @@ struct TreeNode
 {
   double x, y;
   int depth;
-  TreeNode* parent;
-
-  void declareNode(double xx, double yy, TreeNode* parent); // this should probably be a proper constructor
+  int parent_index;
 };
 
 struct RRTree
 {
-  int size; // total number of nodes
-  std::vector<TreeNode*> nodes; // array of all the tree nodes
+  int size = 0; // total number of nodes
+  std::vector<TreeNode> nodes; // array of all the tree nodes
 
-  void addNode(TreeNode* newNode);
+  void addNode(TreeNode newNode);
 };
 
-int generateNode(RRTree* tree, std::vector<int8_t> map, int width, int height, double x_goal, double y_goal);
+TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int height);
 
-nav_msgs::Path unpackPath(RRTree* tree);
+nav_msgs::Path unpackPath(RRTree tree);
 
 #endif

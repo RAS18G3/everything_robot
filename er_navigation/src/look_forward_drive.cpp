@@ -12,6 +12,9 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include <er_planning/PathAction.h>
 #include <actionlib/server/simple_action_server.h>
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "tf2_ros/transform_broadcaster.h"
+#include "tf2_ros/transform_listener.h"
 
 //current position
 double odom_x;
@@ -109,7 +112,17 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr odom_msg){
   tf2::fromMsg(odom_msg->pose.pose.orientation, quaternion);
   tf2::Matrix3x3 rotation_matrix(quaternion);
   rotation_matrix.getRPY(roll, pitch, odom_w);
+}
 
+void get_odom(const geometry_msgs::TransformStamped transformStamped){
+  odom_x = transformStamped.transform.translation.x;
+  odom_y = transformStamped.transform.translation.y;
+
+  double roll, pitch;
+  tf2::Quaternion quaternion;
+  tf2::fromMsg(transformStamped.transform.rotation, quaternion);
+  tf2::Matrix3x3 rotation_matrix(quaternion);
+  rotation_matrix.getRPY(roll, pitch, odom_w);
 }
 
 int sign(double x) {
@@ -128,11 +141,11 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
   bool last_was_y = true;
   for(int i = 0; i < path.size(); i++){
     if(last_was_y){
-      goal_yarr.push_back(path.at(i));
+      goal_xarr.push_back(path.at(i));
       last_was_y = false;
   }
     else{
-      goal_xarr.push_back(path.at(i));
+      goal_yarr.push_back(path.at(i));
       last_was_y = true;
     }
   }
@@ -148,9 +161,26 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
   ros::Subscriber obstacle_sub = n.subscribe("obstacle", 10, obst_callback);
   ros::Publisher twist_pub = n.advertise<geometry_msgs::Twist>("/cartesian_motor_controller/twist", 10);
 
+  er_planning::PathFeedback feedback;
+
   ros::Rate loop_rate(25);
   geometry_msgs::Twist twist_msg;
+//TRANSAFORM
+  //tf2_ros::Buffer tfBuffer;
+  //tf2_ros::TransformListener tfListener(tfBuffer);
+
   while(ros::ok()){
+    //TRANSFORM
+  /*  geometry_msgs::TransformStamped transformStamped;
+    try{
+      transformStamped = tfBuffer.lookupTransform("odom","base_link", ros::Time(0));
+    }
+    catch (tf2::TransformException &ex) {
+      ROS_WARN("%s",ex.what());
+      ros::Duration(1.0).sleep();
+      continue;
+    }*/
+
     //finds current goal point goal_x and goal_y
     find_goto_point(horizon, p);
 
@@ -160,6 +190,11 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
       twist_msg.linear.x = 0;
       twist_msg.linear.y = 0;
       twist_msg.angular.z = 0;
+
+      feedback.stop = true;
+      //as->publishFeedback(feedback);
+      as->setPreempted();
+      break;
     }
     else{
       ROS_INFO("x %f", odom_x);
@@ -235,8 +270,10 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
 
     //publish the twist
     twist_pub.publish(twist_msg);
+
     ros::spinOnce();
-    loop_rate.sleep();}
+    loop_rate.sleep();
+    }
 }
 
 
@@ -247,5 +284,4 @@ int main(int argc, char **argv){
   Server server(nh, "path", boost::bind(&execute, _1, &server), false);
   server.start();
   ros::spin();
-  return 0;
 }

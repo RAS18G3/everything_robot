@@ -12,10 +12,10 @@ void pathdummy_callback(const std_msgs::Int64)
   // the message is not important at all, just callback
   nav_msgs::Path path;
   std::vector<geometry_msgs::PoseStamped> poses(2);
-  poses[0].pose.position.x = 10;
-  poses[0].pose.position.y = 10;
-  poses[1].pose.position.x = 100;
-  poses[1].pose.position.y = 100;
+  poses[0].pose.position.x = 0.2;
+  poses[0].pose.position.y = 0.2;
+  poses[1].pose.position.x = 2.15;
+  poses[1].pose.position.y = 1.3;
   path.poses = poses;
   path_pub.publish(path);
 }

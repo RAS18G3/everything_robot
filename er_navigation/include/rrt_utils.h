@@ -25,6 +25,8 @@ struct RRTree
 
 TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int height);
 
-nav_msgs::Path unpackPath(RRTree tree);
+std::vector<geometry_msgs::PoseStamped> unpackPath(RRTree tree, double resolution, double offsetX, double offsetY);
+
+nav_msgs::OccupancyGrid diluteMap(nav_msgs::OccupancyGrid occupancy_grid, double diluteThresh); // for map dilution
 
 #endif

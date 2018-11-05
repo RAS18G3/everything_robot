@@ -1,8 +1,11 @@
-#ifndef THRESHOLD
-#define THRESHOLD 50
-#endif
-
 #include "rrt_utils.h"
+
+void RRTree::addNode(TreeNode newNode)
+// adds node to the tree
+{
+  nodes.push_back(newNode);
+  size++;
+}
 
 double point_dist(double x1, double y1, double x2, double y2)
 // gives squared distance between points p1 and p2
@@ -17,7 +20,7 @@ double point_dist(double x1, double y1, double x2, double y2)
   return (x1+y1);
 }
 
-bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> map, int height, int width)
+bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> map, int height, int width, int collThresh)
 // checks for collision between points by stepping along a vector
 {
   int x,y; // for indeces
@@ -44,7 +47,7 @@ bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> 
     // basic rounding of indeces (recasting.floor)
     int x_floor = (int) x1;
     int y_floor = (int) y1;
-    if (map[x_floor + y_floor*width] > THRESHOLD)
+    if (map[x_floor + y_floor*width] > collThresh)
     {
       return true;
     }
@@ -52,14 +55,7 @@ bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> 
   return false; // fall through case
 }
 
-void RRTree::addNode(TreeNode newNode)
-// adds node to the tree
-{
-  nodes.push_back(newNode);
-  size++;
-}
-
-TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int height)
+TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int height, int collThresh)
 // generate RRT node randomly, return nullptr if unsuccesful
 {
   int tree_size = tree.size;
@@ -75,7 +71,7 @@ TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int heigh
     // check if new node is on occupied point, throw away if it is
     int x_floor = (int) x;
     int y_floor = (int) y;
-    if (map[x_floor + y_floor*width] > THRESHOLD){ continue; }
+    if (map[x_floor + y_floor*width] > collThresh){ continue; }
     // calculate distances to all existing nodes
     std::vector<double> dists(tree_size,0);
     for(int i = 0; i<tree_size; i++)
@@ -100,7 +96,7 @@ TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int heigh
 
       x_node = tree.nodes[closest_index].x;
       y_node = tree.nodes[closest_index].y;
-      if ( !point_coll(x, y, x_node, y_node, map, width, height) )
+      if ( !point_coll(x, y, x_node, y_node, map, width, height, collThresh) )
       // this node is valid!
       {
         int depth = tree.nodes[closest_index].depth+1;
@@ -150,7 +146,6 @@ nav_msgs::OccupancyGrid diluteMap(nav_msgs::OccupancyGrid occupancy_grid, double
       }
     }
   }
-  ROS_INFO("map diluted. dilRange = %d",dilRange);
   dilutedMap.data = mapNew;
   return dilutedMap;
 }
@@ -180,13 +175,12 @@ std::vector<geometry_msgs::PoseStamped> unpackPath(RRTree tree)
   return poses;
 }
 
-std::vector<geometry_msgs::PoseStamped> smoothPath(std::vector<geometry_msgs::PoseStamped> path, nav_msgs::OccupancyGrid map)
+std::vector<geometry_msgs::PoseStamped> smoothPath(std::vector<geometry_msgs::PoseStamped> path, nav_msgs::OccupancyGrid map, int collThresh)
 // simple path smoother
 {
   double x1, x2, y1, y2;
   std::vector<geometry_msgs::PoseStamped> newPath = path;
   int size = newPath.size();
-  ROS_INFO("Path to smooth was %d nodes long",size);
   bool changed = true;
 
   while( changed && size>2)
@@ -199,16 +193,14 @@ std::vector<geometry_msgs::PoseStamped> smoothPath(std::vector<geometry_msgs::Po
       y1 = newPath[i].pose.position.y;
       x2 = newPath[i+2].pose.position.x;
       y2 = newPath[i+2].pose.position.y;
-      if( !point_coll(x1, y1, x2, y2, map.data, map.info.height, map.info.width) )
+      if( !point_coll(x1, y1, x2, y2, map.data, map.info.height, map.info.width, collThresh) )
       {
-        ROS_INFO("Cutting out a point");
         newPath.erase(std::begin(newPath)+i+1);
         changed = true;
         break;
       }
     }
   }
-  ROS_INFO("New path is %d nodes long",size);
   return newPath;
 }
 

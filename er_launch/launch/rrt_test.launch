@@ -70,7 +70,7 @@
   <node name="simple_object_detector_node" pkg="er_perception" type="er_simple_object_detector_node_2.py" output="screen">
   </node>
 
-  <node name="pathfinder" pkg="er_navigation" type="er_pathfinder_node" output="screen"/>
-  <node name="dummy" pkg="er_navigation" type="er_dummy_path_node" output="screen"/>
+  <node name="pathfinder" pkg="er_planning" type="er_pathfinder_node" output="screen"/>
+  <node name="dummy" pkg="er_planning" type="er_dummy_path_node" output="screen"/>
 
 </launch>

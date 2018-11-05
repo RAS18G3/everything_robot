@@ -63,13 +63,8 @@ TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int heigh
 // generate RRT node randomly, return nullptr if unsuccesful
 {
   int tree_size = tree.size;
-  double t_start = ros::Time::now().toSec();
   while(1)
   {
-    if( ros::Time:now().toSec() - t_start > 1 )
-    {
-      TreeNode newNode = {0,0,0,0};
-    }
     // generate random x and y
     double x = rand() % width+1;
     double y = rand() % height+1;
@@ -160,7 +155,7 @@ nav_msgs::OccupancyGrid diluteMap(nav_msgs::OccupancyGrid occupancy_grid, double
   return dilutedMap;
 }
 
-std::vector<geometry_msgs::PoseStamped> unpackPath(RRTree tree, double resolution, double offsetX, double offsetY)
+std::vector<geometry_msgs::PoseStamped> unpackPath(RRTree tree)
 // assumes last node points is at goal and unpacks that path
 {
   int tree_size = tree.size;
@@ -169,12 +164,10 @@ std::vector<geometry_msgs::PoseStamped> unpackPath(RRTree tree, double resolutio
 
   std::vector<geometry_msgs::PoseStamped> poses(depth+1);
 
-  ROS_INFO("path of length %d",depth+1);
-
   while(1)
   {
-    poses[depth].pose.position.x = currentNode.x*resolution + offsetX;
-    poses[depth].pose.position.y = currentNode.y*resolution + offsetY;
+    poses[depth].pose.position.x = currentNode.x;
+    poses[depth].pose.position.y = currentNode.y;
 
     depth = currentNode.depth;
     if(depth==0){break;} // break if root
@@ -187,36 +180,46 @@ std::vector<geometry_msgs::PoseStamped> unpackPath(RRTree tree, double resolutio
   return poses;
 }
 
-std_msgs::Float64MultiArray unpackPath2(RRTree tree, double resolution, double offsetX, double offsetY)
-// 2nd variant, outputs path as array
+std::vector<geometry_msgs::PoseStamped> smoothPath(std::vector<geometry_msgs::PoseStamped> path, nav_msgs::OccupancyGrid map)
+// simple path smoother
 {
-  int tree_size = tree.size;
-  TreeNode currentNode = tree.nodes[tree_size-1];
-  int depth = currentNode.depth;
+  double x1, x2, y1, y2;
+  std::vector<geometry_msgs::PoseStamped> newPath = path;
+  int size = newPath.size();
+  ROS_INFO("Path to smooth was %d nodes long",size);
+  bool changed = true;
 
-  std_msgs::Float64MultiArray path;
-
-  ROS_INFO("path of length %d",depth+1);
-
-  while(1)
+  while( changed && size>2)
   {
-    path.data.push_back(currentNode.x*resolution + offsetX);
-    path.data.push_back(currentNode.y*resolution + offsetY);
-
-    depth = currentNode.depth;
-    if(depth==0){break;} // break if root
-
-    // dive in
-    int parent_index = currentNode.parent_index;
-    currentNode = tree.nodes[currentNode.parent_index];
-    depth = currentNode.depth;
+    size = newPath.size();
+    changed = false;
+    for(int i=0; i < size-2; i++)
+    {
+      x1 = newPath[i].pose.position.x;
+      y1 = newPath[i].pose.position.y;
+      x2 = newPath[i+2].pose.position.x;
+      y2 = newPath[i+2].pose.position.y;
+      if( !point_coll(x1, y1, x2, y2, map.data, map.info.height, map.info.width) )
+      {
+        ROS_INFO("Cutting out a point");
+        newPath.erase(std::begin(newPath)+i+1);
+        changed = true;
+        break;
+      }
+    }
   }
-  return path;
+  ROS_INFO("New path is %d nodes long",size);
+  return newPath;
 }
 
-
-std::vector<geometry_msgs::PoseStamped> smoothPath(std::vector<geometry_msgs::PoseStamped> path, std::vector<int8_t> map)
-// for path smoothing. currently empty
+std::vector<geometry_msgs::PoseStamped> scalePath(std::vector<geometry_msgs::PoseStamped> path, double offsetX, double offsetY, double resolution)
 {
-  ;
+  std::vector<geometry_msgs::PoseStamped> newPath = path;
+  int size = newPath.size();
+  for(int i=0; i<size; i++)
+  {
+    newPath[i].pose.position.x = path[i].pose.position.x*resolution+offsetX;
+    newPath[i].pose.position.y = path[i].pose.position.y*resolution+offsetY;
+  }
+  return newPath;
 }

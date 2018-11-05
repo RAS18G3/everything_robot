@@ -12,7 +12,7 @@
 Servo grip_servo;  // create a servo object
 
 const int servo_pin = 9;
-const int sleep_time = 10;  // loop sleep time in ms
+const int sleep_time = 100;  // loop sleep time in ms
 const int angle_bounds[2] = {0, 180};
 
 int target_angle = angle_bounds[0]; // variable to store target position for servos

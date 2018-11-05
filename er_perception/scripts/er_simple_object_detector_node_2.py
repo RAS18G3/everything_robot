@@ -9,7 +9,7 @@ from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 from simple_object_detector import find_bounding_boxes
 
-DEBUG = True
+DEBUG = False
 
 class simple_object_detector_node:
 

@@ -2,13 +2,15 @@
 #define MAX_NODES 1000
 #endif
 #ifndef DILUTE_THRESH
-#define DILUTE_THRESH 0.1
+#define DILUTE_THRESH 0.2
 #endif
 
 #include "ros/ros.h"
 #include "nav_msgs/OccupancyGrid.h"
 #include "nav_msgs/Path.h"
 #include "rrt_utils.h"
+
+//#include <actionlib/client/simple_action_client.h>
 
 ros::Publisher path_pub;
 ros::Publisher dilMap_pub;
@@ -28,23 +30,19 @@ void map_callback(const nav_msgs::OccupancyGrid::ConstPtr received_grid)
 void path_callback(const nav_msgs::Path::ConstPtr path)
 {
   ros::Time t_start = ros::Time::now();
-  // dilute map
+  // dilute map and publish for debug
   occupancy_grid = diluteMap(occupancy_grid, DILUTE_THRESH);
   dilMap_pub.publish(occupancy_grid);
-  // unpack map
+
+  // unpack map infno
   int width = occupancy_grid.info.width;
   int height = occupancy_grid.info.height;
   double resolution = occupancy_grid.info.resolution;
-  std::vector<int8_t> map = occupancy_grid.data;
   double offsetX = occupancy_grid.info.origin.position.x;
   double offsetY = occupancy_grid.info.origin.position.y;
+  std::vector<int8_t> map = occupancy_grid.data;
 
-  ROS_INFO("map info: w %d, h %d, r %lf",width,height,resolution);
-
-  // dilute map
-  //map = diluteMap(map, height, width, 10);
-
-  // save start and goal in local positions
+  // save start and goal in local positions (i.e. array indeces)
   double xStart = (path->poses[0].pose.position.x-offsetX)/resolution;
   double yStart = (path->poses[0].pose.position.y-offsetY)/resolution;
   double xGoal = (path->poses[1].pose.position.x-offsetX)/resolution;
@@ -58,6 +56,11 @@ void path_callback(const nav_msgs::Path::ConstPtr path)
   for(int i = 0; i<MAX_NODES; i++)
   {
     TreeNode newNode = generateNode(tree, map, width, height);
+    if( newNode.x == 0 )
+    // timed out
+    {
+      //what do?
+    }
     tree.addNode(newNode);
 
     if(!point_coll(newNode.x, newNode.y, xGoal, yGoal, map, width, height))
@@ -67,11 +70,17 @@ void path_callback(const nav_msgs::Path::ConstPtr path)
       break;
     }
   }
-  nav_msgs::Path foundPath = nav_msgs::Path();
-  foundPath.poses = unpackPath(tree, resolution, offsetX, offsetY);
-  foundPath.header = occupancy_grid.header;
-  path_pub.publish(foundPath);
+  //nav_msgs::Path foundPath = nav_msgs::Path();
+  //foundPath.poses = unpackPath(tree, resolution, offsetX, offsetY);
 
+  //foundPath.header = occupancy_grid.header;
+  //path_pub.publish(foundPath);
+  std_msgs::Float64MultiArray path;
+  path = unpackPath2(tree, resolution, offsetX, offsetY);
+
+  // action client?
+  //typedef actionlib::SimpleActionClient<er_planning::PathAction> Client;
+  //client.sendGoal(path);
   // debug only
 
   ros::Time t_end = ros::Time::now();

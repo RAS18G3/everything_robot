@@ -63,15 +63,21 @@ TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int heigh
 // generate RRT node randomly, return nullptr if unsuccesful
 {
   int tree_size = tree.size;
+  double t_start = ros::Time::now().toSec();
   while(1)
   {
+    if( ros::Time:now().toSec() - t_start > 1 )
+    {
+      TreeNode newNode = {0,0,0,0};
+    }
     // generate random x and y
     double x = rand() % width+1;
     double y = rand() % height+1;
+
     double x_node, y_node, dist;
     bool node_invalid = false;
 
-    // check if new node is on occupied point
+    // check if new node is on occupied point, throw away if it is
     int x_floor = (int) x;
     int y_floor = (int) y;
     if (map[x_floor + y_floor*width] > THRESHOLD){ continue; }
@@ -82,7 +88,7 @@ TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int heigh
       x_node = tree.nodes[i].x;
       y_node = tree.nodes[i].y;
       dist = point_dist(x,y,x_node,y_node);
-      if (dist==0) // node already exists
+      if (dist==0) // node already exists, throw away
       {
         node_invalid = true;
         break;
@@ -113,33 +119,6 @@ TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int heigh
       dists.erase(std::begin(dists)+closest_index);
     }
   }
-}
-
-std::vector<geometry_msgs::PoseStamped> unpackPath(RRTree tree, double resolution, double offsetX, double offsetY)
-// assumes last node points is at goal and unpacks that path
-{
-  int tree_size = tree.size;
-  TreeNode currentNode = tree.nodes[tree_size-1];
-  int depth = currentNode.depth;
-
-  std::vector<geometry_msgs::PoseStamped> poses(depth+1);
-
-  ROS_INFO("path of length %d",depth+1);
-
-  while(1)
-  {
-    poses[depth].pose.position.x = currentNode.x*resolution + offsetX;
-    poses[depth].pose.position.y = currentNode.y*resolution + offsetY;
-
-    depth = currentNode.depth;
-    if(depth==0){break;} // break if root
-
-    // dive in
-    int parent_index = currentNode.parent_index;
-    currentNode = tree.nodes[currentNode.parent_index];
-    depth = currentNode.depth;
-  }
-  return poses;
 }
 
 nav_msgs::OccupancyGrid diluteMap(nav_msgs::OccupancyGrid occupancy_grid, double diluteThresh)
@@ -179,4 +158,65 @@ nav_msgs::OccupancyGrid diluteMap(nav_msgs::OccupancyGrid occupancy_grid, double
   ROS_INFO("map diluted. dilRange = %d",dilRange);
   dilutedMap.data = mapNew;
   return dilutedMap;
+}
+
+std::vector<geometry_msgs::PoseStamped> unpackPath(RRTree tree, double resolution, double offsetX, double offsetY)
+// assumes last node points is at goal and unpacks that path
+{
+  int tree_size = tree.size;
+  TreeNode currentNode = tree.nodes[tree_size-1];
+  int depth = currentNode.depth;
+
+  std::vector<geometry_msgs::PoseStamped> poses(depth+1);
+
+  ROS_INFO("path of length %d",depth+1);
+
+  while(1)
+  {
+    poses[depth].pose.position.x = currentNode.x*resolution + offsetX;
+    poses[depth].pose.position.y = currentNode.y*resolution + offsetY;
+
+    depth = currentNode.depth;
+    if(depth==0){break;} // break if root
+
+    // dive in
+    int parent_index = currentNode.parent_index;
+    currentNode = tree.nodes[currentNode.parent_index];
+    depth = currentNode.depth;
+  }
+  return poses;
+}
+
+std_msgs::Float64MultiArray unpackPath2(RRTree tree, double resolution, double offsetX, double offsetY)
+// 2nd variant, outputs path as array
+{
+  int tree_size = tree.size;
+  TreeNode currentNode = tree.nodes[tree_size-1];
+  int depth = currentNode.depth;
+
+  std_msgs::Float64MultiArray path;
+
+  ROS_INFO("path of length %d",depth+1);
+
+  while(1)
+  {
+    path.data.push_back(currentNode.x*resolution + offsetX);
+    path.data.push_back(currentNode.y*resolution + offsetY);
+
+    depth = currentNode.depth;
+    if(depth==0){break;} // break if root
+
+    // dive in
+    int parent_index = currentNode.parent_index;
+    currentNode = tree.nodes[currentNode.parent_index];
+    depth = currentNode.depth;
+  }
+  return path;
+}
+
+
+std::vector<geometry_msgs::PoseStamped> smoothPath(std::vector<geometry_msgs::PoseStamped> path, std::vector<int8_t> map)
+// for path smoothing. currently empty
+{
+  ;
 }

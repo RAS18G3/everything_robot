@@ -15,8 +15,8 @@ double omega = 0;
 double omega_goal = 0;
 
 // use PI controller, since 25hz is probabaly to low to use d controller in a meaningful way
-double p = 0;
-double i = 20;
+double p = 5;
+double i = 15;
 
 double error_i = 0;
 

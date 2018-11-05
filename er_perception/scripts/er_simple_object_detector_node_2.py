@@ -9,12 +9,12 @@ from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 
 ##### Global variables ##################
-SATURATION_THRESHOLD = 180 # decrease if red/orange/green/blue/yellow are not recognized
+SATURATION_THRESHOLD = 240 # decrease if red/orange/green/blue/yellow are not recognized
 VIOLET_HUE_LOW = 115 # increase the violet range if violet is not recognized
 VIOLET_HUE_HIGH = 145
 VIOLET_SATURATION = 40 # decrease if violet is not recognized
-W_MIN = 35
-H_MIN = 35
+W_MIN = 50
+H_MIN = 50
 # do the opposite if there are too many false positives
 
 DEBUG = False

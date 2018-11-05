@@ -4,12 +4,13 @@ project(er_gripper)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
+  std_srvs
 )
 
 add_compile_options(-std=c++11)
 
 catkin_package(
-  CATKIN_DEPENDS roscpp std_msgs
+  CATKIN_DEPENDS roscpp std_msgs std_srvs
 )
 
 include_directories(

@@ -4,21 +4,27 @@
 #ifndef DILUTE_THRESH
 #define DILUTE_THRESH 0.2
 #endif
+#ifndef DEBUG
+#define DEBUG 1
+#endif
 
-#include "ros/ros.h"
-#include "nav_msgs/OccupancyGrid.h"
-#include "nav_msgs/Path.h"
+//#include "ros/ros.h"
 #include "rrt_utils.h"
+#include <actionlib/client/simple_action_client.h>
 
-//#include <actionlib/client/simple_action_client.h>
+// for the waitForMessage call
+ros::NodeHandle* npointer;
+ros::Duration timeout(1.0);
 
-ros::Publisher path_pub;
+// for action client
+typedef actionlib::SimpleActionClient<er_navigation::Pathfinder> Client;
+//ros::Publisher path_pub;
 ros::Publisher dilMap_pub;
-ros::Subscriber path_sub;
-ros::Subscriber map_sub;
+//ros::Subscriber path_sub;
+//ros::Subscriber map_sub;
 
+/*
 nav_msgs::OccupancyGrid occupancy_grid;
-
 void map_callback(const nav_msgs::OccupancyGrid::ConstPtr received_grid)
 {
   // update map
@@ -26,15 +32,17 @@ void map_callback(const nav_msgs::OccupancyGrid::ConstPtr received_grid)
   occupancy_grid.info = received_grid->info;
   occupancy_grid.data = received_grid->data;
 }
-
+*/
 void path_callback(const nav_msgs::Path::ConstPtr path)
 {
-  ros::Time t_start = ros::Time::now();
+  if( DEBUG == 1){ double exec_time = ros::Time::now().toSec(); }
+  // get latest map
+  nav_msgs::OccupancyGrid occupancy_grid = *(ros::topic::waitForMessage<nav_msgs::OccupancyGrid>("/occupancy_grid", *npointer, timeout));
   // dilute map and publish for debug
   occupancy_grid = diluteMap(occupancy_grid, DILUTE_THRESH);
   dilMap_pub.publish(occupancy_grid);
 
-  // unpack map infno
+  // unpack map info
   int width = occupancy_grid.info.width;
   int height = occupancy_grid.info.height;
   double resolution = occupancy_grid.info.resolution;
@@ -78,26 +86,28 @@ void path_callback(const nav_msgs::Path::ConstPtr path)
   std_msgs::Float64MultiArray path;
   path = unpackPath2(tree, resolution, offsetX, offsetY);
 
-  // action client?
-  //typedef actionlib::SimpleActionClient<er_planning::PathAction> Client;
-  //client.sendGoal(path);
+  // action client ?
+  client.sendGoal(path);
   // debug only
 
-  ros::Time t_end = ros::Time::now();
-  double secs = t_end.toSec() - t_start.toSec();
-  ROS_INFO("found and published in %lf s", secs);
+  if(DEBUG==1)
+  {
+    exec_time -= t_start.toSec();
+    ROS_INFO("found and published in %lf s", exec_time);
+  }
 }
 
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "er_pathfinder_node");
   ros::NodeHandle n;
+  npointer = &n;
   ros::Rate loop_rate(10);
 
-  path_pub = n.advertise<nav_msgs::Path>("/path2", 1);
+  //path_pub = n.advertise<nav_msgs::Path>("/path2", 1);
   dilMap_pub = n.advertise<nav_msgs::OccupancyGrid>("/dilutedMap",1);
-  path_sub = n.subscribe("/path1", 1, path_callback);
-  map_sub = n.subscribe("/occupancy_grid", 1, map_callback);
+  //path_sub = n.subscribe("/path1", 1, path_callback);
+  //map_sub = n.subscribe("/occupancy_grid", 1, map_callback);
 
   while(ros::ok)
   {

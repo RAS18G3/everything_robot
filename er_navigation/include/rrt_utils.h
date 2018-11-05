@@ -2,7 +2,6 @@
 #define RRT_UTILS_H
 
 #include "ros/ros.h"
-#include "occupancy_grid_utils.h"
 #include "nav_msgs/Path.h"
 #include "std_msgs/Float64MultiArray.h"
 

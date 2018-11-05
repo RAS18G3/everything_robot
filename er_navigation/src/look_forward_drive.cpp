@@ -152,6 +152,7 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
 
   stop = false;
   near_end = false;
+  forward = false;
   double horizon = 0.2; //set to good value (0.2 seems to be good)
   int p = 0;
 
@@ -173,7 +174,7 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
     //TRANSFORM
   geometry_msgs::TransformStamped transformStamped;
     try{
-      transformStamped = tfBuffer.lookupTransform("odom","base_link", ros::Time(0));
+      transformStamped = tfBuffer.lookupTransform("map","base_link", ros::Time(0));
     }
     catch (tf2::TransformException &ex) {
       ROS_WARN("%s",ex.what());
@@ -186,7 +187,10 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
     //finds current goal point goal_x and goal_y
     find_goto_point(horizon, p);
 
-    if(stop && forward){
+    double angle_to_point = atan2((goal_y-odom_y), (goal_x-odom_x));
+    double diff=angle_to_point-odom_w;
+
+    if(stop && forward && std::abs(diff) < 0.1){
       //if there is an obstacle and we drive towards it we stop
       ROS_INFO("stop");
       twist_msg.linear.x = 0;
@@ -194,6 +198,9 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
       twist_msg.angular.z = 0;
 
       feedback.stop = true;
+
+      twist_pub.publish(twist_msg);
+
       //as->publishFeedback(feedback);
       as->setPreempted();
       break;
@@ -204,9 +211,7 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
       ROS_INFO("w %f", odom_w*57.32);
 
       //calculates the angle and distance to get to the current goal
-      double angle_to_point = atan2((goal_y-odom_y),(goal_x-odom_x));
       double distance_goal = sqrt(pow((goal_x-odom_x),2)+pow((goal_y-odom_y),2));
-      double diff = angle_to_point-odom_w;
 
       //makes sure we can handle when angles get larger than pi or smaller than -pi
       if (diff > M_PI)
@@ -236,8 +241,11 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
         twist_msg.angular.z = 0;
 
         forward = false;
+
+        twist_pub.publish(twist_msg);
         //send success message to action client
         as->setSucceeded();
+        break;
       }
       else if(std::abs(diff) > 0.2){
         //if the angle to the current goal is to large we stop and spinn on the spot until we have a better angle
@@ -262,7 +270,7 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
         ROS_INFO("abs %f ", std::abs(diff));
         ROS_INFO("diff %f \n", (diff)*57.32);
 
-        twist_msg.linear.x = 0.2;
+        twist_msg.linear.x = stop ? 0 : 0.2;
         twist_msg.linear.y = 0;
         twist_msg.angular.z = 1*(diff);
 

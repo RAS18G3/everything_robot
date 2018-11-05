@@ -9,6 +9,7 @@ from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 from simple_object_detector import find_bounding_boxes
 import keras
+import os
 
 DEBUG = False
 
@@ -21,14 +22,13 @@ class simple_object_detector_node:
 
         self.box_publisher = rospy.Publisher("object_bounding_boxes", UInt16MultiArray, queue_size=1)
 
-        # Needed to convert Image message to cv2 image type
-        self.bridge = CvBridge()
-
-        # Subscriber listening for the images sent by the camera, and set the callback function
-        self.image_sub = rospy.Subscriber('camera/rgb/image_rect_color', Image, self.detect_object, queue_size=1)
-
-        self.cnn_model = keras.models.load_model('cnn.h5')
+        script_folder = os.path.dirname(os.path.realpath(__file__))
+	print(os.path.join(script_folder, 'cnn.h5'))
+        self.cnn_model = keras.models.load_model(os.path.join(script_folder, 'cnn.h5'))
         self.cnn_model._make_predict_function()
+
+        self.bridge = CvBridge()
+        self.image_sub = rospy.Subscriber('camera/rgb/image_rect_color', Image, self.detect_object, queue_size=1)
 
     def run(self):
         # spin() simply keeps python from exiting until this node is stopped
@@ -41,7 +41,7 @@ class simple_object_detector_node:
             rospy.logerror('error when converting message to cv2 image')
             rospy.logerror(e)
 
-        rectangles = find_bounding_boxes(img, DEBUG)
+        rectangles = find_bounding_boxes(img, False)
 
 
         # create message which will be sent

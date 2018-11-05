@@ -1,7 +1,7 @@
 import cv2
 
 ##### Global variables ##################
-SATURATION_THRESHOLD = 240 # decrease if red/orange/green/blue/yellow are not recognized
+SATURATION_THRESHOLD = 210 # decrease if red/orange/green/blue/yellow are not recognized
 VIOLET_HUE_LOW = 115 # increase the violet range if violet is not recognized
 VIOLET_HUE_HIGH = 145
 VIOLET_SATURATION = 40 # decrease if violet is not recognized

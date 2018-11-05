@@ -113,7 +113,8 @@ class simple_object_detector_node:
                 bounding_box_msg.data.append(w)
                 bounding_box_msg.data.append(h)
 
-        self.box_publisher.publish(bounding_box_msg)
+        if DEBUG is False:
+            self.box_publisher.publish(bounding_box_msg)
 
         rospy.logdebug('published the following bounding boxes: ' + str(bounding_box_msg))
 

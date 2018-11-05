@@ -108,7 +108,7 @@ void SLAMNode::reset_localization() {
   double y_max = current_map_.info.origin.position.y + current_map_.info.height * current_map_.info.resolution;
 
   // init random number generators
-  std::default_random_engine generator;
+  std::default_random_engine generator(ros::Time::now().toSec());
   std::uniform_real_distribution<double> x_generator(x_min, x_max);
   std::uniform_real_distribution<double> y_generator(y_min, y_max);
   std::uniform_real_distribution<double> angle_generator(-M_PI, M_PI);

@@ -17,7 +17,7 @@ W_MIN = 50
 H_MIN = 50
 # do the opposite if there are too many false positives
 
-DEBUG = True
+DEBUG = False
 
 class simple_object_detector_node:
 

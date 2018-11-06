@@ -22,6 +22,7 @@
   <depend>tf2</depend>
   <depend>tf</depend>
   <depend>geometry_msgs</depend>
+  <depend>er_planning</depend>
 
   <export>
 

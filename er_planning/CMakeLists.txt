@@ -10,11 +10,21 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   nav_msgs
   roscpp
+  actionlib_msgs
+)
+
+add_action_files(
+  DIRECTORY action
+  FILES Path.action
+  )
+
+generate_messages(
+  DEPENDENCIES actionlib_msgs nav_msgs
 )
 
 catkin_package(
-  INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp nav_msgs tf tf2 geometry_msgs
+ # INCLUDE_DIRS include
+  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp tf tf2 actionlib_msgs
 )
 
 include_directories(

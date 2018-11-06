@@ -136,18 +136,20 @@ void obst_callback(const std_msgs::Bool::ConstPtr& obst_msg){
 
 void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
   //gets the path from action client
-  std::vector<float> path = goal -> Path;
+  nav_msgs::Path path = goal -> Path;
   //creates one vector of x values and one of y values from the data
   bool last_was_y = true;
-  for(int i = 0; i < path.size(); i++){
-    if(last_was_y){
-      goal_xarr.push_back(path.at(i));
-      last_was_y = false;
-  }
-    else{
-      goal_yarr.push_back(path.at(i));
-      last_was_y = true;
-    }
+  for(int i = 0; i < path.poses.size(); i++){
+    goal_xarr.push_back(path.poses.at(i).pose.position.x);
+    goal_yarr.push_back(path.poses.at(i).pose.position.y);
+    // if(last_was_y){
+    //   goal_xarr.push_back(path.poses.at(i));
+    //   last_was_y = false;
+    // }
+    // else{
+    //   goal_yarr.push_back(path.at(i));
+    //   last_was_y = true;
+    // }
   }
 
   stop = false;

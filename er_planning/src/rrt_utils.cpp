@@ -20,7 +20,7 @@ double point_dist(double x1, double y1, double x2, double y2)
   return (x1+y1);
 }
 
-bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> map, int height, int width, int collThresh)
+bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> map, int width, int height, int collThresh)
 // checks for collision between points by stepping along a vector
 {
   int x,y; // for indeces

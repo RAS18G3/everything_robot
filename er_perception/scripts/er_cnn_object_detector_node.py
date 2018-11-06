@@ -21,6 +21,7 @@ class simple_object_detector_node:
         rospy.init_node('er_simple_object_detector_node', anonymous=True)
 
         self.box_publisher = rospy.Publisher("object_bounding_boxes", UInt16MultiArray, queue_size=1)
+        self.box_class_publisher = rospy.Publisher("object_bounding_boxes_classified", UInt16MultiArray, queue_size=1)
 
         script_folder = os.path.dirname(os.path.realpath(__file__))
 	print(os.path.join(script_folder, 'cnn.h5'))
@@ -48,6 +49,7 @@ class simple_object_detector_node:
         # format will be a vector of length 4xn, where n is the number of detected bounding boxes
         # data is ordered like this: x1, y1, w1, h1, x2, y2, w2, h2, ..., xn, yn, wn, hn
         bounding_box_msg = UInt16MultiArray()
+        bounding_box_classified_msg = UInt16MultiArray()
         for box in rectangles:
             (x,y,w,h) = box
             roi = img[y:y+w, x:x+w]
@@ -68,12 +70,19 @@ class simple_object_detector_node:
             bounding_box_msg.data.append(w)
             bounding_box_msg.data.append(h)
 
+            bounding_box_classified_msg.data.append(x)
+            bounding_box_classified_msg.data.append(y)
+            bounding_box_classified_msg.data.append(w)
+            bounding_box_classified_msg.data.append(h)
+            bounding_box_classified_msg.data.append(idx)
+
         if DEBUG:
             cv2.imshow('image', img)
             cv2.waitKey(1)
 
         if DEBUG is False:
             self.box_publisher.publish(bounding_box_msg)
+            self.box_class_publisher.publish(bounding_box_classified_msg)
 
         rospy.logdebug('published the following bounding boxes: ' + str(bounding_box_msg))
 

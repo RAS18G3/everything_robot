@@ -1,5 +1,5 @@
 #ifndef MAX_TIME
-#define MAX_TIME 5
+#define MAX_TIME 15
 #endif
 #ifndef DILUTE_THRESH
 #define DILUTE_THRESH 0.1
@@ -18,7 +18,7 @@
 
 // for the waitForMessage call
 ros::NodeHandle* npointer;
-ros::Duration timeout(1.0);
+ros::Duration timeout(3.0);
 double time_start, time_now;
 
 ros::Publisher pathfinderMap_pub;
@@ -30,10 +30,12 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
   time_start = ros::Time::now().toSec();
   time_now = ros::Time::now().toSec();
   // get latest map
-  nav_msgs::OccupancyGrid occupancy_grid = *(ros::topic::waitForMessage<nav_msgs::OccupancyGrid>("/occupancy_grid", *npointer, timeout));
+  nav_msgs::OccupancyGrid occupancy_grid = *(ros::topic::waitForMessage<nav_msgs::OccupancyGrid>("/slam/occupancy_grid", *npointer, timeout));
 
   // dilute map
   occupancy_grid = diluteMap(occupancy_grid, DILUTE_THRESH);
+
+  pathfinderMap_pub.publish(occupancy_grid);
 
   // unpack map info
   int width = occupancy_grid.info.width;
@@ -80,7 +82,7 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
       nav_msgs::Path foundPath;
       foundPath.header = occupancy_grid.header;
       foundPath.poses = unpackPath(tree);
-      foundPath.poses = smoothPath(foundPath.poses, occupancy_grid, COLL_THRESH);
+      //foundPath.poses = smoothPath(foundPath.poses, occupancy_grid, COLL_THRESH);
       foundPath.poses = scalePath(foundPath.poses, offsetX, offsetY, resolution);
       res.plan = foundPath;
       if(DEBUG==1)
@@ -105,7 +107,7 @@ int main(int argc, char **argv)
   npointer = &n;
   ros::Rate loop_rate(10);
 
-  pathfinder_srv = n.advertiseService("pathfinder", &path_callback);
+  pathfinder_srv = n.advertiseService("/pathfinder/find_path", &path_callback);
 
   // only for Rviz debug
   pathfinderMap_pub = n.advertise<nav_msgs::OccupancyGrid>("/pathfinder_map",1);

@@ -1,5 +1,5 @@
 # Define the goal
-float32[] Path
+nav_msgs/Path Path
 ---
 # Define the result
 float32[] remaining_path

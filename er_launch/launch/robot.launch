@@ -74,7 +74,11 @@
     <param name="threshold" value="50" />
   </node>
 
-  <node name="simple_object_detector_node" pkg="er_perception" type="er_simple_object_detector_node_2.py" output="screen">
-  </node>
+  <node name="simple_object_detector_node" pkg="er_perception" type="er_cnn_object_detector_node.py" output="screen" />
+
+  <node name="pathfinder_node" pkg="er_planning" type="er_pathfinder_node" output="screen"/>
+
+  <node name="look_forward_drive_node" pkg="er_navigation" type="look_forward_drive" output="screen"/>
+
 
 </launch>

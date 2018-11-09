@@ -11,7 +11,7 @@ from simple_object_detector import find_bounding_boxes
 import keras
 import os
 
-DEBUG = True
+DEBUG = False
 
 LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
 

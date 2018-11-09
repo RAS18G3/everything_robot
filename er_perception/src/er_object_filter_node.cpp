@@ -44,11 +44,12 @@ void ObjectFilterNode::boundingbox_cb(const std_msgs::UInt16MultiArray::ConstPtr
         class_id = *it;
         classified_center_points_.emplace_back(x+width/2, y+height/2, class_id);
         ROS_DEBUG("add point");
+        break;
       default:
         ROS_ERROR("this should not happen.");
         break;
     }
-    count = (++count)%4;
+    count = (++count)%5;
   }
 }
 
@@ -60,7 +61,7 @@ void ObjectFilterNode::init_node() {
   ros::param::param<double>("~object_distance", object_distance_, 0.15);
   ros::param::param<std::string>("~pointcloud_3d_topic", pointcloud_3d_topic, "/camera/depth/points");
   ros::param::param<std::string>("~pointcloud_2d_topic", pointcloud_2d_topic, "/camera/pointcloud_2d");
-  ros::param::param<std::string>("~classified_object_bounding_boxes_topic", boundingbox_topic, "/classified_object_bounding_boxes");
+  ros::param::param<std::string>("~classified_object_bounding_boxes_topic", boundingbox_topic, "/object_bounding_boxes_classified");
 
   pointcloud_2d_subscriber_ = nh_.subscribe<PointCloud>(pointcloud_2d_topic, 1, &ObjectFilterNode::pointcloud_2d_cb, this);
   pointcloud_3d_subscriber_ = nh_.subscribe<PointCloud>(pointcloud_3d_topic, 1, &ObjectFilterNode::pointcloud_3d_cb, this);
@@ -93,8 +94,11 @@ void ObjectFilterNode::process_data() {
           }
         }
 
+	ROS_INFO_STREAM(count);
+
         // check if there are a few 3d points to calculate the position
         if(count > 5) {
+	  ROS_INFO("count >5");
           // calculate the average map position of these points
           x_avg /= count;
           y_avg /= count;

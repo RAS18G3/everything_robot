@@ -1,4 +1,5 @@
 import cv2
+import rospy
 
 ##### Global variables ##################
 SATURATION_THRESHOLD = 210 # decrease if red/orange/green/blue/yellow are not recognized
@@ -57,6 +58,9 @@ def find_bounding_boxes(img, debug = False):
 
     for rectangle in rectangles:
         (x,y,w,h) = rectangle
+        if w >= 500 and h>= 300:
+            rospy.logwarn("Large bounding boxes detectd, maybe white balance is off?")
+            continue
         if w >= W_MIN and  h >= H_MIN:
             filtered_rectangles.append(rectangle)
 

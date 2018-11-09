@@ -82,7 +82,7 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
       nav_msgs::Path foundPath;
       foundPath.header = occupancy_grid.header;
       foundPath.poses = unpackPath(tree);
-      //foundPath.poses = smoothPath(foundPath.poses, occupancy_grid, COLL_THRESH);
+      foundPath.poses = smoothPath(foundPath.poses, occupancy_grid, COLL_THRESH);
       foundPath.poses = scalePath(foundPath.poses, offsetX, offsetY, resolution);
       res.plan = foundPath;
       if(DEBUG==1)

@@ -22,6 +22,7 @@ class simple_object_detector_node:
 
         self.box_publisher = rospy.Publisher("object_bounding_boxes", UInt16MultiArray, queue_size=1)
         self.box_class_publisher = rospy.Publisher("object_bounding_boxes_classified", UInt16MultiArray, queue_size=1)
+        self.speak_publisher = rospy.Publisher("/espeak/string", String, queue_size = 1)
 
         script_folder = os.path.dirname(os.path.realpath(__file__))
 	print(os.path.join(script_folder, 'cnn.h5'))
@@ -50,6 +51,7 @@ class simple_object_detector_node:
         # data is ordered like this: x1, y1, w1, h1, x2, y2, w2, h2, ..., xn, yn, wn, hn
         bounding_box_msg = UInt16MultiArray()
         bounding_box_classified_msg = UInt16MultiArray()
+        speak_msg = "data: \'I see a "
         for box in rectangles:
             (x,y,w,h) = box
             roi = img[y:y+w, x:x+w]
@@ -75,6 +77,10 @@ class simple_object_detector_node:
             bounding_box_classified_msg.data.append(w)
             bounding_box_classified_msg.data.append(h)
             bounding_box_classified_msg.data.append(idx)
+
+            speak_msg += LABELS[idx] + "\'"
+
+            self.speak_publisher.publish(speak_msg)
 
         if DEBUG:
             cv2.imshow('image', img)

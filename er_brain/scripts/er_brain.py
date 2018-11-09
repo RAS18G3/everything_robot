@@ -52,8 +52,8 @@ class BrainNode:
         try:
             get_plan = rospy.ServiceProxy('/pathfinder/find_path', GetPlan)
             start = PoseStamped()
-            start.pose.position.x = 0.25
-            start.pose.position.y = 0.25
+            start.pose.position.x = current_x
+            start.pose.position.y = current_y
             end = PoseStamped()
             end.pose.position.x = x
             end.pose.position.y = y

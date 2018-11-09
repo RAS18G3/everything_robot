@@ -80,5 +80,5 @@
 
   <node name="look_forward_drive_node" pkg="er_navigation" type="look_forward_drive" output="screen"/>
 
-
+  <node name="grab_controller_node" pkg="er_gripper" type="er_grab_controller" output="screen" />
 </launch>

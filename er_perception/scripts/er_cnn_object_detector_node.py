@@ -13,13 +13,13 @@ import keras
 import os
 
 DEBUG = False
-prev_idx = 0
 
 LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
 
 class simple_object_detector_node:
 
     def __init__(self):
+	self.prev_idx = -1
         rospy.init_node('er_simple_object_detector_node', anonymous=True)
 
         self.box_publisher = rospy.Publisher("object_bounding_boxes", UInt16MultiArray, queue_size=1)
@@ -82,8 +82,8 @@ class simple_object_detector_node:
 
             speak_msg += LABELS[idx] + ""
 
-            if(idx!=prev_idx)
-                prev_idx = idx
+            if(idx!=self.prev_idx):
+                self.prev_idx = idx
                 self.speak_publisher.publish(speak_msg)
 
         if DEBUG:

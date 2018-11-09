@@ -15,7 +15,7 @@ double evaluate_gaussian(double x, double sigma, double mu=0) {
   return std::exp( - std::pow(x - mu, 2) / (2 * sigma * sigma) ) / (sigma * std::sqrt(2*M_PI));
 }
 
-SLAMNode::SLAMNode() : nh_(), loop_rate_(5), current_state_(None), transform_listener_(transform_buffer_) {
+SLAMNode::SLAMNode() : nh_(), loop_rate_(10), current_state_(None), transform_listener_(transform_buffer_) {
 
 }
 
@@ -40,7 +40,11 @@ void SLAMNode::init_node() {
   ros::param::param<double>("~alpha_trans_rot", alpha_trans_rot_, 0.00001);
   ros::param::param<double>("~alpha_rot_trans", alpha_rot_trans_, 0.000000001);
   ros::param::param<double>("~alpha_rot_rot", alpha_rot_rot_,     0.000000005);
+  ros::param::param<double>("~gaussian_pos_", gaussian_pos_,     0.005);
+  ros::param::param<double>("~gaussian_theta_", gaussian_theta_,     0.005);
   ros::param::param<double>("~laser_sigma", laser_sigma_, 0.05);
+  ros::param::param<double>("~tracking_threshold_", tracking_threshold_, 0.05);
+  ros::param::param<int>("~tracking_particles_", tracking_particles_, 1000);
 
   MapReader map_reader(map_path);
 
@@ -260,6 +264,16 @@ void SLAMNode::measurement_update() {
 
     // for each particle, compare the expected measurement to the actual measurement
     for(auto particles_it = particles_.begin(); particles_it != particles_.end(); ++particles_it) {
+
+      // add some gaussian noise to the particles
+      std::default_random_engine generator(ros::Time::now().toSec());
+      std::normal_distribution<double> pos_generator(0.0, gaussian_pos_);
+      std::normal_distribution<double> theta_generator(0.0, gaussian_theta_);
+      particles_it->x += pos_generator(generator);
+      particles_it->y += pos_generator(generator);
+      particles_it->theta += theta_generator(generator);
+      fix_angle(particles_it->theta);
+
       for(auto laser_it = laser_scans.begin(); laser_it != laser_scans.end(); ++laser_it) {
         // offset the particle based on the lidar position
         double x = particles_it->x + lidar_x * cos(particles_it->theta) + lidar_y * sin(particles_it->theta);
@@ -303,13 +317,15 @@ void SLAMNode::resample() {
   std::vector<Particle> old_particles = std::move(particles_);
   particles_ = std::vector<Particle>();
 
-  // TODO: adaptive resampling
   std::default_random_engine generator;
   std::uniform_real_distribution<double> step_generator(0,  1. / old_particles.size());
   double offset = step_generator(generator);
   double cumulated_weight = old_particles[0].weight, current_weight;
   int current_particle_idx = 0;
-  while(particles_.size() < num_particles_) {
+  int avg_x=0;
+  int avg_y=0;
+  int particle_number = current_state_ == Localization ? num_particles_ : tracking_particles_;
+  while(particles_.size() < particle_number) {
     current_weight = offset + (particles_.size()) * 1. / old_particles.size();
     while(current_weight > cumulated_weight) {
       ++current_particle_idx;
@@ -317,6 +333,7 @@ void SLAMNode::resample() {
     }
     particles_.push_back(old_particles[current_particle_idx]); // this calls the copy constructor, which will not copy the weight, but resets it to 1
   }
+
 
 }
 
@@ -332,6 +349,25 @@ void SLAMNode::publish_transform() {
     x /= particles_.size();
     y /= particles_.size();
     double yaw = std::atan2(yaw_y, yaw_x);
+
+    if(current_state_ == Localization) {
+      // find variance of particle set (to enable tracking mode)
+      double var_x=0;
+      double var_y=0;
+
+      for(auto particles_it = particles_.begin(); particles_it != particles_.end(); ++particles_it) {
+        var_x += std::pow(particles_it->x - x, 2);
+        var_y += std::pow(particles_it->y - y, 2);
+      }
+      var_x /= particles_.size();
+      var_y /= particles_.size();
+
+      if(var_x < tracking_threshold_ && var_y < tracking_threshold_) {
+        ROS_INFO("Switching to tracking mode...");
+        current_state_ = Tracking;
+      }
+    }
+
     // this represents map->base_link
     tf2::Quaternion map_base_link_quaternion;
     map_base_link_quaternion.setRPY(0, 0, yaw);

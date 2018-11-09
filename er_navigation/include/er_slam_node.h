@@ -77,7 +77,10 @@ private:
   int beam_count_; // to reduce the computational load, this is the maximum number of beams to be used
   int num_particles_; // the number of particles after resetting and as long as the algorithm is not adaptive
   double alpha_rot_rot_, alpha_rot_trans_, alpha_trans_rot_, alpha_trans_trans_;
+  double gaussian_pos_, gaussian_theta_;
   double laser_sigma_;
+  double tracking_threshold_;
+  int tracking_particles_;
 
 };
 

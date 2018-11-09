@@ -58,7 +58,7 @@ void ObjectFilterNode::init_node() {
   std::string pointcloud_3d_topic;
   std::string boundingbox_topic;
   ros::param::param<int>("~threshold", threshold_, 100);
-  ros::param::param<double>("~object_distance", object_distance_, 0.2);
+  ros::param::param<double>("~object_distance", object_distance_, 0.1);
   ros::param::param<std::string>("~pointcloud_3d_topic", pointcloud_3d_topic, "/camera/depth_registered/points");
   ros::param::param<std::string>("~pointcloud_2d_topic", pointcloud_2d_topic, "/camera/pointcloud_2d");
   ros::param::param<std::string>("~classified_object_bounding_boxes_topic", boundingbox_topic, "/object_bounding_boxes_classified");
@@ -106,7 +106,7 @@ void ObjectFilterNode::process_data() {
         // check if there is a similar object in the map already
         bool new_object = true;
         for(auto object_it = objects_.begin(); object_it != objects_.end(); ++object_it) {
-          ROS_INFO_STREAM("Distance " << std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) << " " << x_avg << " " << y_avg << " " << object_it->position.x << " " << object_it->position.y);
+          // ROS_INFO_STREAM("Distance " << std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) << " " << x_avg << " " << y_avg << " " << object_it->position.x << " " << object_it->position.y);
           if(std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) < object_distance_) {
             new_object = false;
             objects_.back().position.x = (objects_.back().observations * objects_.back().position.x + x_avg) / (objects_.back().observations + 1);

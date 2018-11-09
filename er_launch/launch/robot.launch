@@ -44,7 +44,7 @@
 
   <node name="slam" pkg="er_navigation" type="er_slam_node" output="screen">
     <param name="map_file" value="$(find ras_maze_map)/maps/lab_maze_2018.txt" />
-    <param name="particles_per_m2" value="250" />
+    <param name="particles_per_m2" value="50" />
     <param name="odometry_topic" value="/wheel_odometry" />
     <param name="laser_scan_topic" value="/scan" />
     <param name="laser_sigma" value="0.1" />

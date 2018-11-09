@@ -13,6 +13,7 @@ import keras
 import os
 
 DEBUG = False
+prev_idx = 0
 
 LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
 
@@ -52,7 +53,7 @@ class simple_object_detector_node:
         # data is ordered like this: x1, y1, w1, h1, x2, y2, w2, h2, ..., xn, yn, wn, hn
         bounding_box_msg = UInt16MultiArray()
         bounding_box_classified_msg = UInt16MultiArray()
-        speak_msg = "data: \'I see a "
+        speak_msg = "I see a "
         for box in rectangles:
             (x,y,w,h) = box
             roi = img[y:y+w, x:x+w]
@@ -79,9 +80,11 @@ class simple_object_detector_node:
             bounding_box_classified_msg.data.append(h)
             bounding_box_classified_msg.data.append(idx)
 
-            speak_msg += LABELS[idx] + "\'"
+            speak_msg += LABELS[idx] + ""
 
-            self.speak_publisher.publish(speak_msg)
+            if(idx!=prev_idx)
+                prev_idx = idx
+                self.speak_publisher.publish(speak_msg)
 
         if DEBUG:
             cv2.imshow('image', img)

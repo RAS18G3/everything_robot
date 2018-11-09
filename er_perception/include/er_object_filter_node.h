@@ -26,16 +26,22 @@ private:
     int x, y;
     Point2D(int xp, int yp) : x(xp), y(yp) {};
   };
+
+  struct Position2D {
+    double x, y;
+    Position2D(double xp, double yp) : x(xp), y(yp) {};
+  };
+
   struct ClassifiedBoundingBoxCenter {
     Point2D position;
     int class_id;
     ClassifiedBoundingBoxCenter(int xp, int yp, int cid) : position(xp, yp), class_id(cid) {};
   };
   struct Object {
-    Point2D position;
+    Position2D position;
     std::vector<int> class_count;
     int observations;
-    Object(int xp, int yp) : position(xp, yp), class_count(15), observations(0) {};
+    Object(double xp, double yp) : position(xp, yp), class_count(15), observations(0) {};
   };
 
 

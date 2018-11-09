@@ -212,7 +212,7 @@ bool SLAMNode::motion_update() {
         fix_angle(it->theta);
       }
 
-      ROS_INFO_STREAM("Prediction time: " << (ros::WallTime::now()-start_time).toSec());
+      ROS_DEBUG_STREAM("Prediction time: " << (ros::WallTime::now()-start_time).toSec());
       return true;
     }
 }
@@ -283,7 +283,7 @@ void SLAMNode::measurement_update() {
 
     // resample
     resample();
-    ROS_INFO_STREAM("Measurement time: " << (ros::WallTime::now()-start_time).toSec());
+    ROS_DEBUG_STREAM("Measurement time: " << (ros::WallTime::now()-start_time).toSec());
   }
 }
 

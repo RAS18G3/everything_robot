@@ -47,7 +47,7 @@
     <param name="particles_per_m2" value="50" />
     <param name="odometry_topic" value="/wheel_odometry" />
     <param name="laser_scan_topic" value="/scan" />
-    <param name="laser_sigma" value="0.1" />
+    <param name="laser_sigma" value="0.02" />
     <param name="alpha_rot_rot" value="0.001" />
     <param name="alpha_rot_trans" value="0.001" />
     <param name="alpha_trans_rot" value="0.001" />

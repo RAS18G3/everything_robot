@@ -20,36 +20,21 @@ void ObjectFilterNode::pointcloud_3d_cb(const PointCloud::ConstPtr& msg) {
   ROS_DEBUG("received 3d pointcloud");
 }
 
-void ObjectFilterNode::boundingbox_cb(const std_msgs::UInt16MultiArray::ConstPtr& msg) {
+void ObjectFilterNode::boundingbox_cb(const er_perception::ClassifiedImage::ConstPtr& msg) {
   int count=0;
   ROS_DEBUG("received bounding boxes");
   classified_center_points_.clear();
   int x, y, width, height, class_id;
-  for(auto it = msg->data.begin(); it != msg->data.end(); ++it) {
-    switch(count) {
-      case 0:
-        x = *it;
-        break;
-      case 1:
-        y = *it;
-        break;
-      case 2:
-        width = *it;
-        break;
-      case 3:
-        height = *it;
-        break;
-      case 4:
-        class_id = *it;
-        classified_center_points_.emplace_back(x+width/2, y+height/2, class_id);
-        ROS_DEBUG("add point");
-        break;
-      default:
-        ROS_ERROR("this should not happen.");
-        break;
-    }
-    count = (++count)%5;
+  for(auto it = msg->bounding_boxes.begin(); it != msg->bounding_boxes.end(); ++it) {
+    x = it->x;
+    y = it->y;
+    width = it->w;
+    height = it->h;
+    class_id = it->class_id;
+    classified_center_points_.emplace_back(x+width/2, y+height/2, class_id);
+    ROS_DEBUG("add point");
   }
+  last_classified_image_msg_ = msg;
 }
 
 void ObjectFilterNode::init_node() {
@@ -65,9 +50,10 @@ void ObjectFilterNode::init_node() {
 
   pointcloud_2d_subscriber_ = nh_.subscribe<PointCloud>(pointcloud_2d_topic, 1, &ObjectFilterNode::pointcloud_2d_cb, this);
   pointcloud_3d_subscriber_ = nh_.subscribe<PointCloud>(pointcloud_3d_topic, 1, &ObjectFilterNode::pointcloud_3d_cb, this);
-  boundingbox_subscriber_ = nh_.subscribe<std_msgs::UInt16MultiArray>(boundingbox_topic, 1, &ObjectFilterNode::boundingbox_cb, this);
+  boundingbox_subscriber_ = nh_.subscribe<er_perception::ClassifiedImage>(boundingbox_topic, 1, &ObjectFilterNode::boundingbox_cb, this);
   object_publisher_ = nh_.advertise<er_perception::ObjectList>("/objects", 1);
   marker_publisher_ = nh_.advertise<visualization_msgs::Marker>( "/object_markers", 0 );
+  evidence_publisher_ = nh_.advertise<ras_msgs::RAS_Evidence>("/evidence", 100);
 
   reset_objects_service_ = nh_.advertiseService(node_name + "/reset_objects", &ObjectFilterNode::reset_objects_cb, this);
   remove_object_service_ = nh_.advertiseService(node_name + "/remove_object", &ObjectFilterNode::remove_object_cb, this);
@@ -130,6 +116,61 @@ void ObjectFilterNode::process_data() {
             int most_likely_class = std::max_element(object_it->class_count.begin(), object_it->class_count.end()) - object_it->class_count.begin();
             ROS_DEBUG_STREAM("Old object: " << object_it->position.x << " " << object_it->position.y << " " << most_likely_class);
             ROS_DEBUG_STREAM("Seeing old object id " << object_it - objects_.begin());
+
+            if(object_it->observations >= 10 and object_it->evidence_published == false) {
+              object_it->evidence_published = true;
+              ras_msgs::RAS_Evidence evidence_msg;
+              evidence_msg.stamp = ros::Time::now();
+              evidence_msg.group_number = 3;
+              evidence_msg.object_location.transform.translation.x = object_it->position.x;
+              evidence_msg.object_location.transform.translation.y = object_it->position.y;
+              evidence_msg.image_evidence = last_classified_image_msg_->image;
+              switch(most_likely_class) {
+                case 0: // yellow ball
+                  evidence_msg.object_id = evidence_msg.yellow_ball;
+                  break;
+                case 1: // yellow cube
+                  evidence_msg.object_id = evidence_msg.yellow_cube;
+                  break;
+                case 2: // green cube
+                  evidence_msg.object_id = evidence_msg.green_cube;
+                  break;
+                case 3: // green cylinder
+                  evidence_msg.object_id = evidence_msg.green_cylinder;
+                  break;
+                case 4: // green hollow cube
+                  evidence_msg.object_id = evidence_msg.green_hollow_cube;
+                  break;
+                case 5: // orange cross
+                  evidence_msg.object_id = evidence_msg.orange_cross;
+                  break;
+                case 6: // patric (orange star)
+                  evidence_msg.object_id = evidence_msg.patric;
+                  break;
+                case 7: // red cylinder
+                  evidence_msg.object_id = evidence_msg.red_cylinder;
+                  break;
+                case 8: // red hollow cube
+                  evidence_msg.object_id = evidence_msg.red_hollow_cube;
+                  break;
+                case 9: // red ball
+                  evidence_msg.object_id = evidence_msg.red_ball;
+                  break;
+                case 10: // blue cube
+                  evidence_msg.object_id = evidence_msg.blue_cube;
+                  break;
+                case 11: // blue triangle
+                  evidence_msg.object_id = evidence_msg.blue_triangle;
+                  break;
+                case 12: // purple cross
+                  evidence_msg.object_id = evidence_msg.purple_cross;
+                  break;
+                case 13: // purple star
+                  evidence_msg.object_id = evidence_msg.purple_star;
+                  break;
+              }
+              evidence_publisher_.publish(evidence_msg);
+            }
             break;
           }
         }

@@ -19,6 +19,8 @@ add_message_files(
   FILES
   Object.msg
   ObjectList.msg
+  ClassifiedBoundingBox.msg
+  ClassifiedImage.msg
 )
 
 add_service_files(
@@ -29,6 +31,7 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+  sensor_msgs
 )
 
 catkin_package(

@@ -21,6 +21,11 @@ class BrainNode:
 
         self.path_client = actionlib.SimpleActionClient('path', PathAction)
 
+        self.object_subscriber = rospy.Subscriber("/objects", ObjectList, self.objects_cb)
+
+    def objects_cb(self, object_list):
+        self.objects = object_list.objects
+
     def run(self):
         command = ''
         while command != 'quit' and command != 'exit':
@@ -32,18 +37,33 @@ class BrainNode:
                 except:
                     print('Wrong arguments...')
             if snippets[0] == 'grab':
-                try:
+                # try:
                     self.grab(int(snippets[1]))
-                except:
-                    print('Wrong arguments...')
-                    print('Available objects are: ')
+                # except:
+                #     print('Wrong arguments...')
+                #     print('Available objects are: ')
+                #     print(self.objects)
+
             elif command == 'quit' or command == 'exit':
                 pass
             else:
                 print('Unknown command')
 
     def grab(self ,id):
-        pass
+        for object in self.objects:
+            if object.id == id:
+                success = self.goto(object.x, object.y)
+                if success:
+                    success = self.grip()
+                else:
+                    return False
+                return True
+        return False
+
+    def grip(self):
+        start_grip = rospy.ServiceProxy('/start_grip', start_grip)
+        success = start_grip()
+        return success
 
     def goto(self, x, y):
         # find current robot position
@@ -90,8 +110,10 @@ class BrainNode:
             print('Execution has finished.')
             # Prints out the result of executing the action
             print(self.path_client.get_result())
+            return True
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e
+            return False
 
 
 if __name__ == '__main__':

@@ -53,6 +53,7 @@ void ObjectFilterNode::boundingbox_cb(const std_msgs::UInt16MultiArray::ConstPtr
 }
 
 void ObjectFilterNode::init_node() {
+  std::string node_name = ros::this_node::getName();
   std::string pointcloud_2d_topic; // assuming this is relative to the robots base_link
   std::string pointcloud_3d_topic;
   std::string boundingbox_topic;
@@ -67,30 +68,33 @@ void ObjectFilterNode::init_node() {
   boundingbox_subscriber_ = nh_.subscribe<std_msgs::UInt16MultiArray>(boundingbox_topic, 1, &ObjectFilterNode::boundingbox_cb, this);
   object_publisher_ = nh_.advertise<er_perception::ObjectList>("/objects", 1);
   marker_publisher_ = nh_.advertise<visualization_msgs::Marker>( "/object_markers", 0 );
+
+  reset_objects_service_ = nh_.advertiseService(node_name + "/reset_objects", &ObjectFilterNode::reset_objects_cb, this);
+  remove_object_service_ = nh_.advertiseService(node_name + "/remove_object", &ObjectFilterNode::remove_object_cb, this);
 }
 
 void ObjectFilterNode::process_data() {
-  PointCloud transformed_pointcloud;
-  const int box_size = 20; // box_size x box_size pixels will be checked and averaged over
+  PointCloud transformed_pointcloud, filtered_pointcloud;
+  const int box_size = 10; // box_size x box_size pixels will be checked and averaged over
   if(points_in_camera_ > threshold_ && last_3d_pointcloud_msg_ != nullptr) {
     // PointCloud transformed_pointcloud;last_3last_3d_pointcloud_msg_
-    pcl_ros::transformPointCloud("/map", pcl_conversions::fromPCL(last_3d_pointcloud_msg_->header.stamp), *last_3d_pointcloud_msg_, "/camera_rgb_optical_frame", transformed_pointcloud, tf_listener_);
 
     for(auto point_it=classified_center_points_.begin(); point_it!=classified_center_points_.end(); ++point_it) {
       // loop over box around center point of bounding box to check the 3d position
       // TODO: check if this could be outside of the image (should not happen in our case because bounding boxes have minimum sizes in x and y)
 
       int count = 0;
-      double x_avg=0, y_avg = 0;
+      double x_avg=0, y_avg = 0, z_avg = 0;
       int class_id = point_it->class_id;
       for(int img_x = point_it->position.x - box_size / 2; img_x < point_it->position.x + box_size / 2; ++img_x) {
         for(int img_y = point_it->position.y - box_size / 2; img_y < point_it->position.y + box_size / 2; ++img_y) {
-          double x = transformed_pointcloud[img_y * 640 + img_x].x;
-          double y = transformed_pointcloud[img_y * 640 + img_x].y;
-          double z = transformed_pointcloud[img_y * 640 + img_x].z;
+          double x = (*last_3d_pointcloud_msg_)[img_y * 640 + img_x].x;
+          double y = (*last_3d_pointcloud_msg_)[img_y * 640 + img_x].y;
+          double z = (*last_3d_pointcloud_msg_)[img_y * 640 + img_x].z;
           if(!std::isnan(x)) {
             x_avg += x;
             y_avg += y;
+            z_avg += z;
             ++count;
           }
         }
@@ -103,6 +107,15 @@ void ObjectFilterNode::process_data() {
         // calculate the average map position of these points
         x_avg /= count;
         y_avg /= count;
+        z_avg /= count;
+
+        // only transform the average point to the map frame
+        filtered_pointcloud.header.frame_id = "/camera_rgb_optical_frame";
+        filtered_pointcloud.push_back(pcl::PointXYZ(x_avg, y_avg, z_avg));
+        pcl_ros::transformPointCloud("/map", pcl_conversions::fromPCL(last_3d_pointcloud_msg_->header.stamp), filtered_pointcloud, "/camera_rgb_optical_frame", transformed_pointcloud, tf_listener_);
+
+        x_avg = transformed_pointcloud[0].x;
+        y_avg = transformed_pointcloud[0].y;
 
         // check if there is a similar object in the map already
         bool new_object = true;
@@ -129,6 +142,40 @@ void ObjectFilterNode::process_data() {
       }
     }
   }
+}
+
+bool ObjectFilterNode::reset_objects_cb(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response ) {
+  objects_.clear();
+
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = "map";
+  marker.header.stamp = ros::Time();
+  marker.ns = "objects";
+  marker.action = visualization_msgs::Marker::DELETEALL;
+  marker_publisher_.publish(marker);
+
+  response.success = true;
+  return true;
+}
+
+bool ObjectFilterNode::remove_object_cb( er_perception::RemoveObject::Request& request, er_perception::RemoveObject::Response& response ) {
+  for(auto objects_it = objects_.begin(); objects_it!=objects_.end(); ++objects_it ) {
+    if(objects_it->id == request.id) {
+      response.success = true;
+      objects_.erase(objects_it);
+
+      visualization_msgs::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = ros::Time();
+      marker.ns = "objects";
+      marker.action = visualization_msgs::Marker::DELETE;
+      marker.id = request.id;
+      marker_publisher_.publish(marker);
+      return true;
+    }
+  }
+  response.success = false;
+  return false;
 }
 
 void ObjectFilterNode::publish_objects() {
@@ -189,7 +236,7 @@ void ObjectFilterNode::publish_objects() {
         marker.color.r = 0;
         marker.color.g = 1;
         marker.color.b = 0.0;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
+        marker.color.a = 0.5; // Don't forget to set the alpha!
         break;
       case 4: // green hollow cube
         marker.type = visualization_msgs::Marker::CUBE;
@@ -217,7 +264,7 @@ void ObjectFilterNode::publish_objects() {
         marker.color.r = 1;
         marker.color.g = 0;
         marker.color.b = 0;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
+        marker.color.a = 0.5; // Don't forget to set the alpha!
         break;
       case 8: // red hollow cube
         marker.type = visualization_msgs::Marker::CUBE;

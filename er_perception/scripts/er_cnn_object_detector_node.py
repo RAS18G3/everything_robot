@@ -12,6 +12,7 @@ import keras
 import os
 
 DEBUG = False
+PUBLISH = True
 
 LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
 
@@ -80,7 +81,7 @@ class simple_object_detector_node:
             cv2.imshow('image', img)
             cv2.waitKey(1)
 
-        if DEBUG is False:
+        if PUBLISH:
             self.box_publisher.publish(bounding_box_msg)
             self.box_class_publisher.publish(bounding_box_classified_msg)
 

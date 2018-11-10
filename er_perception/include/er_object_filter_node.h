@@ -7,7 +7,9 @@
 #include "pcl/point_types.h"
 #include "std_msgs/UInt16MultiArray.h"
 #include "er_perception/ObjectList.h"
+#include "er_perception/RemoveObject.h"
 #include "visualization_msgs/Marker.h"
+#include "std_srvs/Trigger.h"
 
 #include <string>
 #include <cmath>
@@ -53,6 +55,8 @@ private:
   void pointcloud_2d_cb(const PointCloud::ConstPtr& msg);
   void pointcloud_3d_cb(const PointCloud::ConstPtr& msg);
   void boundingbox_cb(const std_msgs::UInt16MultiArray::ConstPtr& msg);
+  bool reset_objects_cb(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response );
+  bool remove_object_cb(er_perception::RemoveObject::Request& request, er_perception::RemoveObject::Response& response );
   void publish_objects();
 
   PointCloud::ConstPtr last_3d_pointcloud_msg_;
@@ -69,6 +73,8 @@ private:
   ros::Subscriber boundingbox_subscriber_;
   ros::Publisher object_publisher_;
   ros::Publisher marker_publisher_;
+  ros::ServiceServer reset_objects_service_;
+  ros::ServiceServer remove_object_service_;
   tf::TransformListener tf_listener_;
 
   ros::Rate loop_rate_;

@@ -16,14 +16,19 @@ find_package(catkin REQUIRED COMPONENTS
 add_compile_options(-std=c++11)
 
 add_message_files(
-FILES
-Object.msg
-ObjectList.msg
+  FILES
+  Object.msg
+  ObjectList.msg
+)
+
+add_service_files(
+  FILES
+  RemoveObject.srv
 )
 
 generate_messages(
-DEPENDENCIES
-std_msgs
+  DEPENDENCIES
+  std_msgs
 )
 
 catkin_package(

@@ -1,3 +1,4 @@
+
 #include "ros/ros.h"
 #include "std_msgs/UInt16MultiArray.h"
 #include "std_msgs/Int64.h"
@@ -16,7 +17,8 @@ int no_bounding_box_counter;
 ros::Subscriber object_box_sub;
 ros::Publisher twist_pub;
 ros::Publisher grab_pub;
-ros::ServiceServer service;
+ros::ServiceServer start_service;
+ros::ServiceServer end_service;
 int sign(double x) {
   return x>0 ? 1 : -1;
 }
@@ -58,6 +60,35 @@ bool grab_cb(std_srvs::Trigger::Request  &req,
   return true;
 }
 
+bool place_cb(std_srvs::Trigger::Request  &req,
+             std_srvs::Trigger::Response &res)
+{
+  geometry_msgs::Twist twist_msg;
+
+  ROS_INFO("Trying to place object...");
+
+
+  std_msgs::Int64 angle_msg;
+  angle_msg.data = 0;
+  grab_pub.publish(angle_msg);
+  ros::Duration(1).sleep();
+
+
+  twist_msg.linear.x = -0.1;
+  twist_pub.publish(twist_msg);
+  ros::Duration(3).sleep();
+
+  twist_msg.linear.x = 0;
+  twist_msg.angular.z = 0;
+  twist_pub.publish(twist_msg);
+  ros::Duration(0.5).sleep();
+
+  res.success = true;
+  done = true;
+
+  return true;
+}
+
 void object_box_callback(const std_msgs::UInt16MultiArray::ConstPtr bounding_box_msg){
   geometry_msgs::Twist twist_msg;
   if(grab_controller_running) {
@@ -67,7 +98,7 @@ void object_box_callback(const std_msgs::UInt16MultiArray::ConstPtr bounding_box
         done = true;
         twist_pub.publish(twist_msg);
         ROS_INFO("Stop, there is no object");
-        
+
       }
       return;
     }
@@ -130,7 +161,8 @@ int main(int argc, char **argv){
   object_box_sub = n.subscribe("object_bounding_boxes", 1, object_box_callback);
   twist_pub = n.advertise<geometry_msgs::Twist>("/cartesian_motor_controller/twist", 1);
   grab_pub = n.advertise<std_msgs::Int64>("grip", 1);
-  service = n.advertiseService("start_grip", &grab_cb);
+  start_service = n.advertiseService("start_grip", &grab_cb);
+  end_service = n.advertiseService("end_grip", &place_cb);
   grab_controller_running = false;
 
   ros::spin();

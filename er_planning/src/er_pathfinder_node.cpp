@@ -1,9 +1,6 @@
 #ifndef MAX_TIME
 #define MAX_TIME 15
 #endif
-#ifndef DILUTE_THRESH
-#define DILUTE_THRESH 0.1
-#endif
 #ifndef COLL_THRESH
 #define COLL_THRESH 50
 #endif
@@ -21,6 +18,8 @@ ros::NodeHandle* npointer;
 ros::Duration timeout(3.0);
 double time_start, time_now;
 
+double dilute_threshold;
+
 ros::Publisher pathfinderMap_pub;
 ros::Publisher pathfinderPath_pub;
 ros::ServiceServer pathfinder_srv;
@@ -33,7 +32,7 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
   nav_msgs::OccupancyGrid occupancy_grid = *(ros::topic::waitForMessage<nav_msgs::OccupancyGrid>("/slam/occupancy_grid", *npointer, timeout));
 
   // dilute map
-  occupancy_grid = diluteMap(occupancy_grid, DILUTE_THRESH);
+  occupancy_grid = diluteMap(occupancy_grid, dilute_threshold);
 
   pathfinderMap_pub.publish(occupancy_grid);
 
@@ -108,6 +107,9 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(10);
 
   pathfinder_srv = n.advertiseService("/pathfinder/find_path", &path_callback);
+
+  // load parameter
+  ros::param::param<double>("~dilusion_radius", dilute_threshold, 0.2);
 
   // only for Rviz debug
   pathfinderMap_pub = n.advertise<nav_msgs::OccupancyGrid>("/pathfinder_map",1);

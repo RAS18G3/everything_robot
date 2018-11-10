@@ -40,11 +40,11 @@ void SLAMNode::init_node() {
   ros::param::param<double>("~alpha_trans_rot", alpha_trans_rot_, 0.00001);
   ros::param::param<double>("~alpha_rot_trans", alpha_rot_trans_, 0.000000001);
   ros::param::param<double>("~alpha_rot_rot", alpha_rot_rot_,     0.000000005);
-  ros::param::param<double>("~gaussian_pos_", gaussian_pos_,     0.005);
-  ros::param::param<double>("~gaussian_theta_", gaussian_theta_,     0.005);
+  ros::param::param<double>("~gaussian_pos", gaussian_pos_,     0.005);
+  ros::param::param<double>("~gaussian_rot", gaussian_theta_,     0.005);
   ros::param::param<double>("~laser_sigma", laser_sigma_, 0.05);
-  ros::param::param<double>("~tracking_threshold_", tracking_threshold_, 0.05);
-  ros::param::param<int>("~tracking_particles_", tracking_particles_, 1000);
+  ros::param::param<double>("~tracking_threshold", tracking_threshold_, 0.05);
+  ros::param::param<int>("~tracking_particles", tracking_particles_, 1000);
 
   MapReader map_reader(map_path);
 
@@ -74,7 +74,7 @@ void SLAMNode::run_node() {
 
       if(motion_update()) {
         measurement_update();
-        publish_particles();
+        //publish_particles();
         publish_transform();
       }
 
@@ -262,13 +262,15 @@ void SLAMNode::measurement_update() {
       ROS_DEBUG_STREAM(it->range << " " << it->angle);
     }
 
+    std::default_random_engine generator(ros::Time::now().toSec());
+    std::normal_distribution<double> pos_generator(0.0, gaussian_pos_);
+    std::normal_distribution<double> theta_generator(0.0, gaussian_theta_);
+
     // for each particle, compare the expected measurement to the actual measurement
+    ROS_DEBUG_STREAM("new eval");
     for(auto particles_it = particles_.begin(); particles_it != particles_.end(); ++particles_it) {
 
       // add some gaussian noise to the particles
-      std::default_random_engine generator(ros::Time::now().toSec());
-      std::normal_distribution<double> pos_generator(0.0, gaussian_pos_);
-      std::normal_distribution<double> theta_generator(0.0, gaussian_theta_);
       particles_it->x += pos_generator(generator);
       particles_it->y += pos_generator(generator);
       particles_it->theta += theta_generator(generator);
@@ -286,14 +288,17 @@ void SLAMNode::measurement_update() {
         // check what's the expected range
         double range_expected = ray_cast(current_map_, x, y, laser_angle);
         double range_error = laser_it->range - range_expected;
-
+        if( particles_it - particles_.begin() == 1) {
+          ROS_DEBUG_STREAM(range_error);
+        }
         // adjust the weight of the particle based on how likely that measurement is
         // 0.2 is to add a given probability for it to be an outlier
         // this way a single very bad measurement will not completely destroy the particle
         // not really mathematical but seems to work well
-        particles_it->weight *= (evaluate_gaussian(range_error, laser_sigma_) + 0.2);
+        particles_it->weight *= (evaluate_gaussian(range_error, laser_sigma_));
       }
     }
+    publish_particles();
 
     // resample
     resample();

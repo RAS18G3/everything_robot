@@ -6,6 +6,8 @@
 #include "pcl_ros/point_cloud.h"
 #include "pcl/point_types.h"
 #include "std_msgs/UInt16MultiArray.h"
+#include "er_perception/ObjectList.h"
+#include "visualization_msgs/Marker.h"
 
 #include <string>
 #include <cmath>
@@ -41,7 +43,8 @@ private:
     Position2D position;
     std::vector<int> class_count;
     int observations;
-    Object(double xp, double yp) : position(xp, yp), class_count(15), observations(0) {};
+    int id;
+    Object(double xp, double yp, int i) : position(xp, yp), class_count(15), observations(0), id(i) {};
   };
 
 
@@ -50,6 +53,7 @@ private:
   void pointcloud_2d_cb(const PointCloud::ConstPtr& msg);
   void pointcloud_3d_cb(const PointCloud::ConstPtr& msg);
   void boundingbox_cb(const std_msgs::UInt16MultiArray::ConstPtr& msg);
+  void publish_objects();
 
   PointCloud::ConstPtr last_3d_pointcloud_msg_;
 
@@ -63,12 +67,16 @@ private:
   ros::Subscriber pointcloud_2d_subscriber_;
   ros::Subscriber pointcloud_3d_subscriber_;
   ros::Subscriber boundingbox_subscriber_;
+  ros::Publisher object_publisher_;
+  ros::Publisher marker_publisher_;
   tf::TransformListener tf_listener_;
 
   ros::Rate loop_rate_;
 
   std::vector<ClassifiedBoundingBoxCenter> classified_center_points_;
   std::vector<Object> objects_;
+
+  int id_counter;
 
   double object_distance_;
 };

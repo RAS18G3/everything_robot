@@ -8,6 +8,7 @@ import actionlib
 import tf2_ros
 from er_planning.msg import PathAction, PathActionGoal
 from nav_msgs.srv import GetPlan
+from er_perception.msg import ObjectList
 
 
 
@@ -26,14 +27,23 @@ class BrainNode:
             command = raw_input('# ')
             snippets = command.split(' ')
             if snippets[0] == 'goto':
-                # try:
-                self.goto(float(snippets[1]), float(snippets[2]))
-                # except:
-                    # print('Wrong arguments...')
+                try:
+                    self.goto(float(snippets[1]), float(snippets[2]))
+                except:
+                    print('Wrong arguments...')
+            if snippets[0] == 'grab':
+                try:
+                    self.grab(int(snippets[1]))
+                except:
+                    print('Wrong arguments...')
+                    print('Available objects are: ')
             elif command == 'quit' or command == 'exit':
                 pass
             else:
                 print('Unknown command')
+
+    def grab(self ,id):
+        pass
 
     def goto(self, x, y):
         # find current robot position

@@ -48,6 +48,7 @@ private:
     std::vector<int> class_count;
     int observations;
     int id;
+    int class_id;
     bool evidence_published;
     Object(double xp, double yp, int i) : position(xp, yp), class_count(15), observations(0), id(i), evidence_published(false) {};
   };
@@ -90,6 +91,7 @@ private:
   int id_counter;
 
   double object_distance_;
+  double same_object_distance_;
 };
 
 

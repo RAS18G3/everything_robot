@@ -43,7 +43,8 @@ void ObjectFilterNode::init_node() {
   std::string pointcloud_3d_topic;
   std::string boundingbox_topic;
   ros::param::param<int>("~threshold", threshold_, 100);
-  ros::param::param<double>("~object_distance", object_distance_, 0.1);
+  ros::param::param<double>("~object_distance", object_distance_, 0.03);
+  ros::param::param<double>("~same_object_distance", same_object_distance_, 0.2);
   ros::param::param<std::string>("~pointcloud_3d_topic", pointcloud_3d_topic, "/camera/depth_registered/points");
   ros::param::param<std::string>("~pointcloud_2d_topic", pointcloud_2d_topic, "/camera/pointcloud_2d");
   ros::param::param<std::string>("~classified_object_bounding_boxes_topic", boundingbox_topic, "/object_bounding_boxes_classified");
@@ -107,13 +108,15 @@ void ObjectFilterNode::process_data() {
         bool new_object = true;
         for(auto object_it = objects_.begin(); object_it != objects_.end(); ++object_it) {
           // ROS_INFO_STREAM("Distance " << std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) << " " << x_avg << " " << y_avg << " " << object_it->position.x << " " << object_it->position.y);
-          if(std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) < object_distance_) {
+          if((std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) < same_object_distance_ && object_it->class_id == class_id) ||
+              std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) < object_distance_) {
             new_object = false;
-            object_it->position.x = (object_it->observations * object_it->position.x + x_avg) / (object_it->observations + 1);
-            object_it->position.y = (object_it->observations * object_it->position.y + y_avg) / (object_it->observations + 1);
+            object_it->position.x = 0.95 * object_it->position.x + 0.05 * x_avg;
+            object_it->position.y = 0.95 * object_it->position.y + 0.05 * y_avg;
             ++object_it->class_count[class_id];
             ++object_it->observations;
             int most_likely_class = std::max_element(object_it->class_count.begin(), object_it->class_count.end()) - object_it->class_count.begin();
+            object_it->class_id = most_likely_class;
             ROS_DEBUG_STREAM("Old object: " << object_it->position.x << " " << object_it->position.y << " " << most_likely_class);
             ROS_DEBUG_STREAM("Seeing old object id " << object_it - objects_.begin());
 

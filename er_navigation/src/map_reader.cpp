@@ -61,7 +61,7 @@ nav_msgs::OccupancyGrid MapReader::occupancy_grid(double margin) const {
 
   double width = max_x;
   double height = max_y;
-  double resolution = 0.02;
+  double resolution = 0.005;
 
   int8_t unknown_value = 5;
 

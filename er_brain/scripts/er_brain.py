@@ -60,7 +60,7 @@ class BrainNode:
     def retrieve(self, id):
         if self.grab(id):
             if self.goto(0.2, 0.2):
-                end_grip()
+                self.end_grip()
             else:
                 print('Error while going back')
                 return False

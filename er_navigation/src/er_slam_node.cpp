@@ -290,6 +290,7 @@ void SLAMNode::measurement_update() {
         double range_error = laser_it->range - range_expected;
         if( particles_it - particles_.begin() == 1) {
           ROS_DEBUG_STREAM(range_error);
+          ROS_INFO_STREAM(range_error << " -> " << evaluate_gaussian(range_error, laser_sigma_));
         }
         // adjust the weight of the particle based on how likely that measurement is
         // 0.2 is to add a given probability for it to be an outlier
@@ -354,6 +355,7 @@ void SLAMNode::publish_transform() {
     x /= particles_.size();
     y /= particles_.size();
     double yaw = std::atan2(yaw_y, yaw_x);
+    fix_angle(yaw);
 
     if(current_state_ == Localization) {
       // find variance of particle set (to enable tracking mode)

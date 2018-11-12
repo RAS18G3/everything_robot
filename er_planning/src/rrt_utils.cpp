@@ -58,9 +58,11 @@ bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> 
 TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int height, int collThresh)
 // generate RRT node randomly, return nullptr if unsuccesful
 {
+  ROS_INFO("start generate node");
   int tree_size = tree.size;
   while(1)
   {
+    // ROS_INFO("generating node...");
     // generate random x and y
     double x = rand() % width+1;
     double y = rand() % height+1;
@@ -193,7 +195,7 @@ std::vector<geometry_msgs::PoseStamped> smoothPath(std::vector<geometry_msgs::Po
       y1 = newPath[i].pose.position.y;
       x2 = newPath[i+2].pose.position.x;
       y2 = newPath[i+2].pose.position.y;
-      if( !point_coll(x1, y1, x2, y2, map.data, map.info.height, map.info.width, collThresh) )
+      if( !point_coll(x1, y1, x2, y2, map.data, map.info.width, map.info.height, collThresh) )
       {
         newPath.erase(std::begin(newPath)+i+1);
         changed = true;

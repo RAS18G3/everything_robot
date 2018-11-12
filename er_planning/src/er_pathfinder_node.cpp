@@ -32,9 +32,9 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
   nav_msgs::OccupancyGrid occupancy_grid = *(ros::topic::waitForMessage<nav_msgs::OccupancyGrid>("/slam/occupancy_grid", *npointer, timeout));
 
   // dilute map
+  nav_msgs::OccupancyGrid undiluted_grid = occupancy_grid;
   occupancy_grid = diluteMap(occupancy_grid, dilute_threshold);
 
-  pathfinderMap_pub.publish(occupancy_grid);
 
   // unpack map info
   int width = occupancy_grid.info.width;
@@ -42,7 +42,7 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
   double resolution = occupancy_grid.info.resolution;
   double offsetX = occupancy_grid.info.origin.position.x;
   double offsetY = occupancy_grid.info.origin.position.y;
-  std::vector<int8_t> map = occupancy_grid.data;
+  std::vector<int8_t>& map = occupancy_grid.data;
 
   // save start and goal in local positions (i.e. array indeces)
   double xStart = (req.start.pose.position.x-offsetX)/resolution;
@@ -51,7 +51,21 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
   double yGoal = (req.goal.pose.position.y-offsetY)/resolution;
 
   bool invalidPath = false;
-  if(occupancy_grid.data[(int)xStart + ((int)yStart)*width] > COLL_THRESH){ invalidPath = true; }
+  if(occupancy_grid.data[(int)xStart + ((int)yStart)*width] > COLL_THRESH) {
+    // remove dilution around start point (if robot drives into some area it should be able to get out of it)
+    ROS_INFO("Start in diluted area, remove dilution around it");
+    const int remove_radius = 0.15 / resolution;
+    for(int x=xStart - remove_radius; x < xStart + remove_radius; ++x) {
+      for(int y=yStart - remove_radius; y < yStart + remove_radius; ++y) {
+        if(undiluted_grid.data[x + y*width ] <= 50) {
+          map[x + y*width] = 0;
+        }
+      }
+    }
+  }
+
+  pathfinderMap_pub.publish(occupancy_grid);
+
   if(occupancy_grid.data[(int)xGoal + ((int)yGoal)*width] > COLL_THRESH){ invalidPath = true; }
   if( invalidPath )
   {

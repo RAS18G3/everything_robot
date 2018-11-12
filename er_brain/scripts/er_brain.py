@@ -8,6 +8,7 @@ import actionlib
 import tf2_ros
 from er_planning.msg import PathAction, PathActionGoal
 from nav_msgs.srv import GetPlan
+from std_srvs.srv import Trigger
 from er_perception.msg import ObjectList
 
 
@@ -37,17 +38,36 @@ class BrainNode:
                 except:
                     print('Wrong arguments...')
             if snippets[0] == 'grab':
-                # try:
+                try:
                     self.grab(int(snippets[1]))
-                # except:
-                #     print('Wrong arguments...')
-                #     print('Available objects are: ')
-                #     print(self.objects)
+                except:
+                    print('Wrong arguments...')
+                    print('Available objects are: ')
+                    print(self.objects)
+            if snippets[0] == 'retrieve':
+                try:
+                    self.retrieve(int(snippets[1]))
+                except:
+                    print('Wrong arguments...')
+                    print('Available objects are: ')
+                    print(self.objects)
 
             elif command == 'quit' or command == 'exit':
                 pass
             else:
                 print('Unknown command')
+
+    def retrieve(self, id):
+        if self.grab(id):
+            if self.goto(0.2, 0.2):
+                end_grip()
+            else:
+                print('Error while going back')
+                return False
+        else:
+            print('Error while gripping')
+            return False
+
 
     def grab(self ,id):
         for object in self.objects:
@@ -58,11 +78,18 @@ class BrainNode:
                 else:
                     return False
                 return True
+        print('Object id not found')
         return False
 
     def grip(self):
-        start_grip = rospy.ServiceProxy('/start_grip', start_grip)
+        start_grip = rospy.ServiceProxy('/start_grip', Trigger)
         success = start_grip()
+        return success
+
+
+    def end_grip(self):
+        end_grip = rospy.ServiceProxy('/end_grip', Trigger)
+        success = end_grip()
         return success
 
     def goto(self, x, y):
@@ -71,7 +98,7 @@ class BrainNode:
             trans = self.tfBuffer.lookup_transform('map', 'base_link', rospy.Time())
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             print('Error looking up transform')
-            return
+            return False
 
         current_x = trans.transform.translation.x
         current_y = trans.transform.translation.y
@@ -89,6 +116,7 @@ class BrainNode:
             end.pose.position.y = y
             plan = get_plan(start, end, 0)
             print('Path found. Sending to path execution...')
+            print(plan)
 
             # send plan to path execution
             # Creates the SimpleActionClient, passing the type of the action

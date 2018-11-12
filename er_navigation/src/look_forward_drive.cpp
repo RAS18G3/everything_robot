@@ -33,25 +33,33 @@ bool stop;
 bool forward;
 bool near_end;
 
+void fix_angle(double& angle) {
+    angle = std::fmod(angle + M_PI, 2*M_PI);
+    if (angle < 0)
+        angle += M_PI;
+    else
+      angle -= M_PI;
+}
+
 void find_goto_point(double horizon, int p){
   if(near_end == true){
     //when near last point we want to go to the point and not use the look forward method
     goal_x = goal_xarr.at(1);
     goal_y = goal_yarr.at(1);
   }
-else if(goal_xarr.size() == 0){
-  //avoids problems when there is no path
-  goal_x = odom_x;
-  goal_y = odom_y;
-  ROS_INFO("no goal");
-}
-else if(goal_xarr.size() == 1){
-  //if we only have one point we can't draw a line (should never be used)
-  goal_x = goal_xarr.at(0);
-  goal_y = goal_yarr.at(0);
-  ROS_INFO("one point");
-}
-else{
+  else if(goal_xarr.size() == 0){
+    //avoids problems when there is no path
+    goal_x = odom_x;
+    goal_y = odom_y;
+    ROS_INFO("no goal");
+  }
+  else if(goal_xarr.size() == 1){
+    //if we only have one point we can't draw a line (should never be used)
+    goal_x = goal_xarr.at(0);
+    goal_y = goal_yarr.at(0);
+    ROS_INFO("one point");
+  }
+  else{
     //calculates nearest point from our position to the line we want to follow
      double ABx = goal_xarr.at(p+1)-goal_xarr.at(p);
      double ABy = goal_yarr.at(p+1)-goal_yarr.at(p);
@@ -76,25 +84,25 @@ else{
        goal_y = nearest_y_online + horizon*sin(ang);
      }
 
-    else{
-      //calculates the two point on the line with the horizon as distance to the robot
-     double ang = atan2(goal_yarr.at(p+1)-goal_yarr.at(p), goal_xarr.at(p+1)-goal_xarr.at(p));
-     double A_nearest_len = sqrt(pow(nearest_x_online-odom_x,2)+pow(nearest_y_online-odom_y,2));
-     double length_plus = sqrt(pow(horizon,2)-pow(A_nearest_len,2));
-     double x1 = nearest_x_online + length_plus*cos(ang);
-     double x2 = nearest_x_online - length_plus*cos(ang);
-     double y1 = nearest_y_online + length_plus*sin(ang);
-     double y2 = nearest_y_online - length_plus*sin(ang);
-     //decides wich point is in the right direction to get to the goal
-     if(sqrt(pow(goal_xarr.at(p+1)-x1,2)+pow(goal_yarr.at(p+1)-y1,2)) < sqrt(pow(goal_xarr.at(p+1)-x2,2)+pow(goal_yarr.at(p+1)-y2,2))){
-       goal_x = x1;
-       goal_y = y1;
-     }
      else{
-       goal_x = x2;
-       goal_y = y2;
+       //calculates the two point on the line with the horizon as distance to the robot
+       double ang = atan2(goal_yarr.at(p+1)-goal_yarr.at(p), goal_xarr.at(p+1)-goal_xarr.at(p));
+       double A_nearest_len = sqrt(pow(nearest_x_online-odom_x,2)+pow(nearest_y_online-odom_y,2));
+       double length_plus = sqrt(pow(horizon,2)-pow(A_nearest_len,2));
+       double x1 = nearest_x_online + length_plus*cos(ang);
+       double x2 = nearest_x_online - length_plus*cos(ang);
+       double y1 = nearest_y_online + length_plus*sin(ang);
+       double y2 = nearest_y_online - length_plus*sin(ang);
+       //decides wich point is in the right direction to get to the goal
+       if(sqrt(pow(goal_xarr.at(p+1)-x1,2)+pow(goal_yarr.at(p+1)-y1,2)) < sqrt(pow(goal_xarr.at(p+1)-x2,2)+pow(goal_yarr.at(p+1)-y2,2))){
+         goal_x = x1;
+         goal_y = y1;
+       }
+       else{
+         goal_x = x2;
+         goal_y = y2;
+       }
      }
-   }
   }
   ROS_INFO_STREAM("goal endpoint " << goal_xarr[1] << " " << goal_yarr[1]);
   ROS_INFO("goal x %f", goal_x);
@@ -139,6 +147,8 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
   nav_msgs::Path path = goal -> Path;
   //creates one vector of x values and one of y values from the data
   bool last_was_y = true;
+  goal_xarr.clear();
+  goal_yarr.clear();
   for(int i = 0; i < path.poses.size(); i++){
     goal_xarr.push_back(path.poses.at(i).pose.position.x);
     goal_yarr.push_back(path.poses.at(i).pose.position.y);
@@ -180,7 +190,6 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
     }
     catch (tf2::TransformException &ex) {
       ROS_WARN("%s",ex.what());
-      ros::Duration(1.0).sleep();
       continue;
     }
 
@@ -190,7 +199,10 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
     find_goto_point(horizon, p);
 
     double angle_to_point = atan2((goal_y-odom_y), (goal_x-odom_x));
+    fix_angle(angle_to_point);
+    fix_angle(odom_w);
     double diff=angle_to_point-odom_w;
+    fix_angle(diff);
 
     if(stop && forward && std::abs(diff) < 0.1){
       //if there is an obstacle and we drive towards it we stop

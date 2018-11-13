@@ -82,6 +82,7 @@ int8_t&  at(nav_msgs::OccupancyGrid &occupancy_grid, int x, int y) {
     throw std::out_of_range ("y out of map boundaries");
   else
     occupancy_grid.data[y*occupancy_grid.info.width + x];
+
 }
 
 int sign(int x) {

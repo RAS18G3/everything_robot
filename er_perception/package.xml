@@ -27,7 +27,8 @@
   <depend>opencv3</depend>
   <depend>cv_bridge</depend>
   <depend>rospy</depend>
-
+  <depend>er_planning</depend>
+  <depend>ras_msgs</depend>
 
 
   <export>

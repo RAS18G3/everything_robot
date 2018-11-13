@@ -10,8 +10,10 @@ import numpy as np
 from simple_object_detector import find_bounding_boxes
 import keras
 import os
+from er_perception.msg import ClassifiedImage, ClassifiedBoundingBox
 
 DEBUG = False
+PUBLISH = True
 
 LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
 
@@ -21,6 +23,7 @@ class simple_object_detector_node:
         rospy.init_node('er_simple_object_detector_node', anonymous=True)
 
         self.box_publisher = rospy.Publisher("object_bounding_boxes", UInt16MultiArray, queue_size=1)
+        self.box_class_publisher = rospy.Publisher("object_bounding_boxes_classified", ClassifiedImage, queue_size=1)
 
         script_folder = os.path.dirname(os.path.realpath(__file__))
 	print(os.path.join(script_folder, 'cnn.h5'))
@@ -48,6 +51,7 @@ class simple_object_detector_node:
         # format will be a vector of length 4xn, where n is the number of detected bounding boxes
         # data is ordered like this: x1, y1, w1, h1, x2, y2, w2, h2, ..., xn, yn, wn, hn
         bounding_box_msg = UInt16MultiArray()
+        classified_image_msg = ClassifiedImage()
         for box in rectangles:
             (x,y,w,h) = box
             roi = img[y:y+w, x:x+w]
@@ -59,21 +63,34 @@ class simple_object_detector_node:
             if idx == 14:
                 continue
 
-            if DEBUG:
-                cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                cv2.putText(img, LABELS[idx] + '({0})'.format(p[0][idx]),(x, y + h/2), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2,cv2.LINE_AA)
+            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.putText(img, LABELS[idx] + '({0})'.format(p[0][idx]),(x, y + h/2), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2,cv2.LINE_AA)
 
             bounding_box_msg.data.append(x)
             bounding_box_msg.data.append(y)
             bounding_box_msg.data.append(w)
             bounding_box_msg.data.append(h)
 
+            classified_bounding_box = ClassifiedBoundingBox()
+
+
+            classified_bounding_box.x = x
+            classified_bounding_box.y = y
+            classified_bounding_box.w = w
+            classified_bounding_box.h = h
+            classified_bounding_box.class_id = idx
+
+            classified_image_msg.bounding_boxes.append(classified_bounding_box)
+
+        classified_image_msg.image = self.bridge.cv2_to_imgmsg(img, encoding="passthrough")
+
         if DEBUG:
             cv2.imshow('image', img)
             cv2.waitKey(1)
 
-        if DEBUG is False:
+        if PUBLISH:
             self.box_publisher.publish(bounding_box_msg)
+            self.box_class_publisher.publish(classified_image_msg)
 
         rospy.logdebug('published the following bounding boxes: ' + str(bounding_box_msg))
 

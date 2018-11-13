@@ -28,22 +28,18 @@ catkin_package(
 )
 
 include_directories(
-# include
-  ${catkin_INCLUDE_DIRS}
+  include ${catkin_INCLUDE_DIRS}
 )
 
 add_executable(send_odom src/send_odom.cpp)
 add_executable(path_node src/path_node.cpp)
+add_executable(er_pathfinder_node src/er_pathfinder_node.cpp src/rrt_utils.cpp)
 
 add_dependencies(send_odom ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(path_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(er_pathfinder_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 
 target_link_libraries(send_odom ${catkin_LIBRARIES})
 target_link_libraries(path_node ${catkin_LIBRARIES})
-
-
-
-
-
-
+target_link_libraries(er_pathfinder_node ${catkin_LIBRARIES})

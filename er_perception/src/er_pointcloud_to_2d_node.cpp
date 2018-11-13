@@ -13,7 +13,7 @@ void PointCloudTo2DNode::pointcloud_cb(const PointCloud::ConstPtr& msg) {
   PointCloud modified_pointcloud;
 
   // transform the point cloud such that ground is parallel to the floor
-  pcl_ros::transformPointCloud("/base_link", *msg, transformed_pointcloud, tf_listener_);
+  pcl_ros::transformPointCloud("/base_link", pcl_conversions::fromPCL(msg->header.stamp), *msg, "/camera_depth_frame", transformed_pointcloud, tf_listener_);
 
   // remove all nan entrise (which correspond to now point), and threshold based on the defined height
   for(auto it=transformed_pointcloud.begin(); it != transformed_pointcloud.end(); ++it) {
@@ -28,6 +28,7 @@ void PointCloudTo2DNode::pointcloud_cb(const PointCloud::ConstPtr& msg) {
   // set the reference frame
   // this could also be map/odom, but this way no transform is required to get the distance from this points to the robot
   modified_pointcloud.header.frame_id = "/base_link";
+  modified_pointcloud.header.stamp = msg->header.stamp;
   pointcloud_publisher_.publish(modified_pointcloud);
 }
 

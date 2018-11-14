@@ -10,6 +10,8 @@ from er_planning.msg import PathAction, PathActionGoal
 from nav_msgs.srv import GetPlan
 from std_srvs.srv import Trigger
 from er_perception.msg import ObjectList
+import random
+import time
 
 
 
@@ -37,6 +39,8 @@ class BrainNode:
                     self.goto(float(snippets[1]), float(snippets[2]))
                 except:
                     print('Wrong arguments...')
+            if snippets[0] == 'explore':
+                self.explore()
             if snippets[0] == 'grab':
                 try:
                     self.grab(int(snippets[1]))
@@ -67,6 +71,17 @@ class BrainNode:
         else:
             print('Error while gripping')
             return False
+
+    def explore(self):
+        start_time = time.time()
+        elapsed_time = time.time()-start_time
+        while elapsed_time < 30:
+            x = random.uniform(0.2, 1.8)
+            y = random.uniform(0.2, 1.8)
+            print("x:"+str(x)+" y:"+str(y))
+            self.goto(x, y)
+            elapsed_time = time.time()-start_time
+        self.goto(0.2, 0.2)
 
 
     def grab(self ,id):

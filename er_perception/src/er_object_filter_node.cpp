@@ -55,6 +55,8 @@ void ObjectFilterNode::init_node() {
   object_publisher_ = nh_.advertise<er_perception::ObjectList>("/objects", 1);
   marker_publisher_ = nh_.advertise<visualization_msgs::Marker>( "/object_markers", 0 );
   evidence_publisher_ = nh_.advertise<ras_msgs::RAS_Evidence>("/evidence", 100);
+  //HERE
+  speak_publisher = nh_.advertise<std_msgs::String>("/espeak/string", 1);
 
   reset_objects_service_ = nh_.advertiseService(node_name + "/reset_objects", &ObjectFilterNode::reset_objects_cb, this);
   remove_object_service_ = nh_.advertiseService(node_name + "/remove_object", &ObjectFilterNode::remove_object_cb, this);
@@ -123,6 +125,8 @@ void ObjectFilterNode::process_data() {
             if(object_it->observations >= 10 and object_it->evidence_published == false) {
               object_it->evidence_published = true;
               ras_msgs::RAS_Evidence evidence_msg;
+              //HERE
+              std_msgs::String speak_msg;
               evidence_msg.stamp = ros::Time::now();
               evidence_msg.group_number = 3;
               evidence_msg.object_location.transform.translation.x = object_it->position.x;
@@ -131,48 +135,64 @@ void ObjectFilterNode::process_data() {
               switch(most_likely_class) {
                 case 0: // yellow ball
                   evidence_msg.object_id = evidence_msg.yellow_ball;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 1: // yellow cube
                   evidence_msg.object_id = evidence_msg.yellow_cube;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 2: // green cube
                   evidence_msg.object_id = evidence_msg.green_cube;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 3: // green cylinder
                   evidence_msg.object_id = evidence_msg.green_cylinder;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 4: // green hollow cube
                   evidence_msg.object_id = evidence_msg.green_hollow_cube;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 5: // orange cross
                   evidence_msg.object_id = evidence_msg.orange_cross;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 6: // patric (orange star)
                   evidence_msg.object_id = evidence_msg.patric;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 7: // red cylinder
                   evidence_msg.object_id = evidence_msg.red_cylinder;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 8: // red hollow cube
                   evidence_msg.object_id = evidence_msg.red_hollow_cube;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 9: // red ball
                   evidence_msg.object_id = evidence_msg.red_ball;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 10: // blue cube
                   evidence_msg.object_id = evidence_msg.blue_cube;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 11: // blue triangle
                   evidence_msg.object_id = evidence_msg.blue_triangle;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 12: // purple cross
                   evidence_msg.object_id = evidence_msg.purple_cross;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
                 case 13: // purple star
                   evidence_msg.object_id = evidence_msg.purple_star;
+                  speak_msg.Data = "I see a yellow ball";
                   break;
               }
               evidence_publisher_.publish(evidence_msg);
+              //HERE
+              speak_publisher.publish(speak_msg);
             }
             break;
           }

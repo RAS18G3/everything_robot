@@ -76,8 +76,8 @@ class BrainNode:
         start_time = time.time()
         elapsed_time = time.time()-start_time
         while elapsed_time < 30:
-            x = random.uniform(0.2, 1.8)
-            y = random.uniform(0.2, 1.8)
+            x = random.uniform(0.2, 2.0)
+            y = random.uniform(0.2, 2.0)
             print("x:"+str(x)+" y:"+str(y))
             self.goto(x, y)
             elapsed_time = time.time()-start_time

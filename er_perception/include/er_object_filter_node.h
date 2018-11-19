@@ -12,6 +12,8 @@
 #include "visualization_msgs/Marker.h"
 #include "std_srvs/Trigger.h"
 #include "ras_msgs/RAS_Evidence.h"
+#include "std_msgs/String.h"
+
 
 #include <string>
 #include <cmath>
@@ -79,6 +81,7 @@ private:
   ros::Publisher object_publisher_;
   ros::Publisher marker_publisher_;
   ros::Publisher evidence_publisher_;
+  ros::Publisher  speak_publisher_;
   ros::ServiceServer reset_objects_service_;
   ros::ServiceServer remove_object_service_;
   tf::TransformListener tf_listener_;

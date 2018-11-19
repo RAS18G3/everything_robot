@@ -39,6 +39,7 @@ private:
   bool motion_update();
   void measurement_update();
   void resample();
+  void map_update();
 
   // Type definitions
   struct Particle {
@@ -49,6 +50,10 @@ private:
   };
 
   enum State { None, Localization, Tracking };
+  struct LaserScan {
+    double range, angle;
+    LaserScan(double r, double a) : range(r), angle(a) {};
+  };
 
   // ROS specific member variables
   ros::NodeHandle nh_;
@@ -67,6 +72,8 @@ private:
   geometry_msgs::TransformStamped last_odometry_msg_;
   sensor_msgs::LaserScan::ConstPtr current_laser_scan_msg_;
 
+  MapReader map_reader_;
+
   ros::Time update_step_time_;
 
   // Particle filter member variables
@@ -80,6 +87,7 @@ private:
   double gaussian_pos_, gaussian_theta_;
   double laser_sigma_;
   double tracking_threshold_;
+  double x_est_, y_est_, yaw_est_;
   int tracking_particles_;
 
 };

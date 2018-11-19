@@ -14,6 +14,7 @@
 class MapReader {
 public:
   MapReader(std::string path_to_map);
+  MapReader();
   ~MapReader();
 
   nav_msgs::OccupancyGrid occupancy_grid(double margin) const;

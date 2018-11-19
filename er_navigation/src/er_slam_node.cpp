@@ -1,5 +1,9 @@
 #include "er_slam_node.h"
 
+const double lidar_angle = M_PI;
+const double lidar_x = 0.03;
+const double lidar_y = 0;
+
 void fix_angle(double& angle) {
     angle = std::fmod(angle + M_PI, 2*M_PI);
     if (angle < 0)
@@ -46,7 +50,7 @@ void SLAMNode::init_node() {
   ros::param::param<double>("~tracking_threshold", tracking_threshold_, 0.05);
   ros::param::param<int>("~tracking_particles", tracking_particles_, 1000);
 
-  MapReader map_reader(map_path);
+  map_reader_ = MapReader(map_path);
 
   map_publisher_ = nh_.advertise<nav_msgs::OccupancyGrid>(node_name + "/occupancy_grid", 1);
   particles_publisher_ = nh_.advertise<geometry_msgs::PoseArray>(node_name + "/particles", 1);
@@ -54,7 +58,7 @@ void SLAMNode::init_node() {
   odometry_subscriber_ = nh_.subscribe<nav_msgs::Odometry>(odometry_topic, 1, &SLAMNode::odometry_cb, this);
   laser_scan_subscriber_ = nh_.subscribe<>(laser_scan_topic, 1, &SLAMNode::laser_scan_cb, this);
 
-  current_map_ = map_reader.occupancy_grid(map_margin_);
+  current_map_ = map_reader_.occupancy_grid(map_margin_);
 
   // advertise the service which will reset the localization
   reset_localization_service_ = nh_.advertiseService(node_name + "/reset_localization", &SLAMNode::reset_localization_cb, this);
@@ -78,6 +82,10 @@ void SLAMNode::run_node() {
         publish_transform();
       }
 
+      if(current_state_ == Tracking) {
+        map_update();
+      }
+
     }
 
     map_publisher_.publish(current_map_);
@@ -92,10 +100,38 @@ bool SLAMNode::reset_localization_cb(std_srvs::Trigger::Request& request, std_sr
   ROS_INFO("Reset localization...");
   response.success = true;
 
+  current_map_ = map_reader_.occupancy_grid(map_margin_);
   reset_localization();
 
   ROS_INFO_STREAM("Reset localization successful. Particles generated: " << particles_.size());
   return true;
+}
+
+void SLAMNode::map_update() {
+  // first find all valid laser scans in the current message
+  std::vector<LaserScan> laser_scans;
+
+  for(int i = 0; i < current_laser_scan_msg_->ranges.size(); ++i) {
+    double range = current_laser_scan_msg_->ranges[i];
+    if(!std::isinf(range) && range <= current_laser_scan_msg_->range_max && range >= current_laser_scan_msg_->range_min) {
+      double angle =  current_laser_scan_msg_->angle_min + i * current_laser_scan_msg_->angle_increment + lidar_angle;
+      fix_angle(angle);
+      laser_scans.emplace_back(range, angle);
+    }
+  }
+
+  for(auto laser_it = laser_scans.begin(); laser_it != laser_scans.end(); ++laser_it) {
+    // offset the particle based on the lidar position
+    double x = x_est_ + lidar_x * cos(yaw_est_) + lidar_y * sin(yaw_est_);
+    double y = y_est_ + lidar_x * sin(yaw_est_) + lidar_y * cos(yaw_est_);
+
+    // calculate laser angle in global reference frame
+    double laser_angle = yaw_est_ + laser_it->angle;
+    fix_angle(laser_angle);
+
+    // check what's the expected range
+    ray_cast_update(current_map_, x, y, laser_angle, laser_it->range, 3, 10);
+  }
 }
 
 void SLAMNode::reset_localization() {
@@ -228,17 +264,10 @@ void SLAMNode::measurement_update() {
 
     // TEMP FIX
     // TODO: use TF to get the transform between base_link and frame_id of current_laser_scan_msg_ and calculate the offset based on that
-    const double lidar_angle = M_PI;
-    const double lidar_x = 0.03;
-    const double lidar_y = 0;
 
     // first find the laser beams to use
     // the data will be inf in random placces (every 2nd, but sometimes even or odd indices)
     // and we want to maximally use beam_count_ laser beams, optimally equally distributed
-    struct LaserScan {
-      double range, angle;
-      LaserScan(double r, double a) : range(r), angle(a) {};
-    };
     std::vector<LaserScan> laser_scans;
 
     // e.g. if there are 100 beams, and we want 2 beams, this way we will skip 49 indices, and take the next feasible
@@ -356,6 +385,10 @@ void SLAMNode::publish_transform() {
     y /= particles_.size();
     double yaw = std::atan2(yaw_y, yaw_x);
     fix_angle(yaw);
+
+    x_est_ = x;
+    y_est_ = y;
+    yaw_est_ = yaw;
 
     if(current_state_ == Localization) {
       // find variance of particle set (to enable tracking mode)

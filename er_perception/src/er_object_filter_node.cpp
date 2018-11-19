@@ -1,5 +1,4 @@
 #include "er_object_filter_node.h"
-#include "std_msgs/String.h"
 
 ObjectFilterNode::ObjectFilterNode() : nh_(),  last_3d_pointcloud_msg_(nullptr), loop_rate_(10), id_counter(0) {
 
@@ -56,6 +55,7 @@ void ObjectFilterNode::init_node() {
   object_publisher_ = nh_.advertise<er_perception::ObjectList>("/objects", 1);
   marker_publisher_ = nh_.advertise<visualization_msgs::Marker>( "/object_markers", 0 );
   evidence_publisher_ = nh_.advertise<ras_msgs::RAS_Evidence>("/evidence", 100);
+  speak_publisher_ = nh_.advertise<std_msgs::String>("/espeak/string", 1);
 
   reset_objects_service_ = nh_.advertiseService(node_name + "/reset_objects", &ObjectFilterNode::reset_objects_cb, this);
   remove_object_service_ = nh_.advertiseService(node_name + "/remove_object", &ObjectFilterNode::remove_object_cb, this);
@@ -63,7 +63,6 @@ void ObjectFilterNode::init_node() {
 
 void ObjectFilterNode::process_data() {
 
-  ros::Publisher  speak_publisher = nh_.advertise<std_msgs::String>("/espeak/string", 1);
 
   PointCloud transformed_pointcloud, filtered_pointcloud;
   const int box_size = 10; // box_size x box_size pixels will be checked and averaged over
@@ -137,64 +136,65 @@ void ObjectFilterNode::process_data() {
               switch(most_likely_class) {
                 case 0: // yellow ball
                   evidence_msg.object_id = evidence_msg.yellow_ball;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see a yellow ball");
                   break;
                 case 1: // yellow cube
                   evidence_msg.object_id = evidence_msg.yellow_cube;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see a yellow cube");
                   break;
                 case 2: // green cube
                   evidence_msg.object_id = evidence_msg.green_cube;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see a green cube");
                   break;
                 case 3: // green cylinder
                   evidence_msg.object_id = evidence_msg.green_cylinder;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see a green cylinder");
                   break;
                 case 4: // green hollow cube
                   evidence_msg.object_id = evidence_msg.green_hollow_cube;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see a green hollow cube");
                   break;
                 case 5: // orange cross
                   evidence_msg.object_id = evidence_msg.orange_cross;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see an orange cross");
                   break;
                 case 6: // patric (orange star)
                   evidence_msg.object_id = evidence_msg.patric;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see Patric the Starfish");
                   break;
                 case 7: // red cylinder
                   evidence_msg.object_id = evidence_msg.red_cylinder;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see a red cylinder");
                   break;
                 case 8: // red hollow cube
                   evidence_msg.object_id = evidence_msg.red_hollow_cube;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see a red hollow cube");
                   break;
                 case 9: // red ball
                   evidence_msg.object_id = evidence_msg.red_ball;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see a red ball");
                   break;
                 case 10: // blue cube
                   evidence_msg.object_id = evidence_msg.blue_cube;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see a blue cube");
                   break;
                 case 11: // blue triangle
                   evidence_msg.object_id = evidence_msg.blue_triangle;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see a blue triangle");
                   break;
                 case 12: // purple cross
                   evidence_msg.object_id = evidence_msg.purple_cross;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see a purple cross");
                   break;
                 case 13: // purple star
                   evidence_msg.object_id = evidence_msg.purple_star;
-                  speak_msg.data = "I see a yellow ball";
+                  speak_msg.data = std::string("I see a purple star");
                   break;
               }
               evidence_publisher_.publish(evidence_msg);
               //HERE
-              speak_publisher.publish(speak_msg);
+              ROS_INFO("I am about to pub speak_msg:");
+              speak_publisher_.publish(speak_msg);
             }
             break;
           }

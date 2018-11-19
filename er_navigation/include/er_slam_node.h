@@ -68,6 +68,7 @@ private:
   tf2_ros::TransformListener transform_listener_;
 
   nav_msgs::OccupancyGrid current_map_;
+  nav_msgs::OccupancyGrid current_obstacle_map_;
   geometry_msgs::TransformStamped current_odomotry_msg_;
   geometry_msgs::TransformStamped last_odometry_msg_;
   sensor_msgs::LaserScan::ConstPtr current_laser_scan_msg_;

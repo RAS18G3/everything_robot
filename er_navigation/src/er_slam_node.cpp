@@ -88,7 +88,7 @@ void SLAMNode::run_node() {
 
     }
 
-    map_publisher_.publish(current_map_);
+    map_publisher_.publish(current_obstacle_map_);
 
 
     loop_rate_.sleep();
@@ -101,6 +101,7 @@ bool SLAMNode::reset_localization_cb(std_srvs::Trigger::Request& request, std_sr
   response.success = true;
 
   current_map_ = map_reader_.occupancy_grid(map_margin_);
+  current_obstacle_map_ = current_map_;
   reset_localization();
 
   ROS_INFO_STREAM("Reset localization successful. Particles generated: " << particles_.size());
@@ -130,7 +131,8 @@ void SLAMNode::map_update() {
     fix_angle(laser_angle);
 
     // check what's the expected range
-    ray_cast_update(current_map_, x, y, laser_angle, laser_it->range, 3, 10);
+    ray_cast_update(current_obstacle_map_, x, y, laser_angle, laser_it->range, 3, 5);
+    // ray_cast_update_mult(current_map_, x, y, laser_angle, laser_it->range, 0.9, 1.5);
   }
 }
 

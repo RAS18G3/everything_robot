@@ -6,6 +6,17 @@
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2_ros/transform_listener.h"
 
+struct PositionVector
+{
+  double PosX;
+  double PosY;
+};
+struct PositionVector_int
+{
+  int PosX;
+  int PosY;
+};
+
 ros::NodeHandle* npointer;
 ros::Duration timeout(3.0);
 
@@ -23,6 +34,10 @@ double resolution;
 double offsetX;
 double offsetY;
 std::vector<int8_t> map;
+
+void goto_point(double x, double y){
+ //Do something good
+}
 
 double point_dist(double x1, double y1, double x2, double y2)
 // gives squared distance between points p1 and p2
@@ -101,14 +116,39 @@ void get_grid_position(){
   y_grid = (int)((pos_y-offsetY) / resolution);
 }
 
-int pos2index(int x, int y){
-  int grid_pos = y*width+x;
-  return grid_pos;
+int pos2index(int xg, int yg){
+  int index = yg*width+xg;
+  return index;
+}
+
+PositionVector_int index2pos(int index){
+  int i = 0;
+  while(index-((i+1)*width) > 0){
+    i++;
+  }
+  int y = i;
+  int x = index-(i*width);
+  PositionVector_int pos;
+  pos.PosX = x;
+  pos.PosY = y;
+  return pos;
+}
+PositionVector grid_pos2coordinates(int xg, int yg){
+  double x = xg*resolution;
+  double y = yg*resolution;
+
+  PositionVector coordinates;
+
+  coordinates.PosX = x;
+  coordinates.PosY = y;
+
+  return coordinates;
 }
 
 bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response){
   ros::NodeHandle n;
   ros::Subscriber grid_subscriber = n.subscribe("/slam/occupancy_grid", 1, grid_callback);
+  ros::Publisher fog_map_publisher = n.advertise<nav_msgs::OccupancyGrid>("fog_map", 1);
   ros::Rate loop_rate(10);
 
   ros::spinOnce();
@@ -116,7 +156,7 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
 
   //map of what we have already seen
   int size = width*height;
-  std::vector<int> fog_map(size);
+  std::vector<int8_t> fog_map(size);
 
   while(DONE == false){
     ros::spinOnce();
@@ -158,8 +198,21 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
 
       if(found_cell == false){
         DONE = true;
-        ROS_INFO("go to cell: %d", next_cell);
       }
+      else{
+        ROS_INFO("go to cell: %d", next_cell);
+        PositionVector_int next_grid_pos = index2pos(next_cell);
+        PositionVector next_goal = grid_pos2coordinates(next_grid_pos.PosX, next_grid_pos.PosY);
+      }
+
+    nav_msgs::OccupancyGrid fog_map_msg;
+    fog_map_msg.data = fog_map;
+    fog_map_msg.info.resolution = resolution;
+    fog_map_msg.info.width = width;
+    fog_map_msg.info.height = height;
+    fog_map_msg.info.origin.position.x = offsetX;
+    fog_map_msg.info.origin.position.y = offsetY;
+    fog_map_publisher.publish(fog_map_msg);
     }
 
   }

@@ -121,31 +121,52 @@ bool point_coll(double x1, double y1, double x2, double y2, int collThresh)
   return false; // fall through case
 }
 
-bool check_collision(double x1, double y1, double x2, double y2, int collThresh){
-  double dx = x2-x1;
-  double dy = y2-y1;
+double ray_cast double x, double y, double angle, double error_value) {
+  // find starting grid index
+  x = (x - offsetX) / resolution;
+  y = (y - offsetY) / resolution;
 
-  double vec_magnitude = sqrt(pow(dx,2) + pow(dy,2));
-  dx = (dx/vec_magnitude)*0.01;;
-  dy = (dy/vec_magnitude)*0.01;
-  double x = x1;
-  double y = y1;
-  int x_cell;
-  int y_cell;
-  double distance = sqrt(pow(x-x2,2)+pow(y-y2,2));
-  while(distance < 0.02){
-  x = x+dx;
-  y = y+dy;
-  double distance = sqrt(pow(x-x2,2)+pow(y-y2,2));
-  x_cell = (int)((x-offsetX) / resolution);
-  y_cell = (int)((y-offsetY) / resolution);
-  int idx = pos2index(x_cell, y_cell);
-  ROS_INFO("map value: %d", map.at(idx));
-  if(map.at(idx) > collThresh){
-    return true;
+  double x_start = x;
+  double y_start = y;
+
+  int x_discrete = std::floor(x);
+  int y_discrete = std::floor(y);
+
+  double v_x = cos(angle);
+  double v_y = sin(angle);
+
+  // TODO: boundary check (particles could for example move out of the grid map)
+  int step_x = std::abs(angle) <= M_PI/2 ? 1:-1;
+  int step_y = angle > 0 ? 1:-1;
+
+  // given the ray (x,y)+t*(vx,vy), check for which t the next cell in x and y direction is reached
+  double x_boundary = step_x > 0 ? std::ceil(x) : std::floor(x);
+  double y_boundary = step_y > 0 ? std::ceil(y) : std::floor(y);
+  double t_max_x = (x_boundary - x) / v_x;
+  double t_max_y = (y_boundary - y) / v_y;
+
+  // how far to increase t in x and y to go through a whole grid cell
+  double t_delta_x = std::abs(1/v_x);
+  double t_delta_y = std::abs(1/v_y);
+
+  // iterate over the line until there is an obstacle (note there should always be one, since we are inside the maze)
+  try {
+    while(at(occupancy_grid, x_discrete, y_discrete) < 50) {
+      if(t_max_x < t_max_y) {
+        t_max_x = t_max_x + t_delta_x;
+        x_discrete = x_discrete + step_x;
+      }
+      else {
+        t_max_y = t_max_y + t_delta_y;
+        y_discrete = y_discrete + step_y;
+      }
+    }
   }
-}
- return false;
+  catch (...) {
+    return error_value;
+  }
+  return std::sqrt( std::pow(x_discrete+0.5-x_start, 2) + std::pow(y_discrete+0.5-y_start, 2) ) * resolution;
+
 }
 
 void grid_callback(const nav_msgs::OccupancyGrid::ConstPtr occupancy_grid){
@@ -218,7 +239,14 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
           double x = pos.PosX;
           double y = pos.PosY;
           int dist = pow(x_grid-xg,2)+pow(y_grid-yg,2);
-          bool collision = point_coll(pos_x, pos_y, x, y, 40);
+          bool collision = false;
+
+          double angle2point = atan2(pos_x-x, pos_y-y);
+          double ray = ray_cast(pos_x, pos_y, angle2point, 10);
+          if(ray < sqrt(pow(pos_x-x,2)+pow(pos_y-y,2)){
+            collision = true;
+          }
+
           int index = pos2index(xg,yg);
           if(dist < pow(25,2) && collision == false){
             fog_map.at(index) = 30;

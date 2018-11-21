@@ -173,7 +173,7 @@ void SLAMNode::map_update() {
     double angle = std::atan2(it->y - current_transform.transform.translation.y, it->x - current_transform.transform.translation.x);
     double range = std::sqrt(std::pow(it->x - current_transform.transform.translation.x, 2) + std::pow(it->y - current_transform.transform.translation.y,2));
     ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, angle, range, 3, 7);
-    ROS_INFO_STREAM(angle << " " << range);
+    // ROS_INFO_STREAM(angle << " " << range);
   }
 
 }
@@ -289,7 +289,7 @@ bool SLAMNode::motion_update() {
       double forward=1;
       if(std::abs(x1 + delta_trans*cos(yaw1 + delta_rot1) - x2) > 0.001) {
         forward = -1;
-        ROS_INFO_STREAM("backward");
+        // ROS_INFO_STREAM("backward");
       }
 
 

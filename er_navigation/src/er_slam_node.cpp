@@ -65,6 +65,7 @@ void SLAMNode::init_node() {
 
   odometry_subscriber_ = nh_.subscribe<nav_msgs::Odometry>(odometry_topic, 1, &SLAMNode::odometry_cb, this);
   laser_scan_subscriber_ = nh_.subscribe<>(laser_scan_topic, 1, &SLAMNode::laser_scan_cb, this);
+  pointcloud_subscriber_ = nh_.subscribe<PointCloud>("/camera/pointcloud_2d", 1, &SLAMNode::pointcloud_cb, this);
 
   current_map_ = map_reader_.occupancy_grid(map_margin_);
 
@@ -96,7 +97,7 @@ void SLAMNode::run_node() {
 
     }
 
-    map_publisher_.publish(current_obstacle_map_);
+    map_publisher_.publish(merge_maps(current_lidar_map_, current_obstacle_map_));
     // map_publisher_.publish(current_obstacle_map_);
 
 
@@ -111,6 +112,7 @@ bool SLAMNode::reset_localization_cb(std_srvs::Trigger::Request& request, std_sr
 
   current_map_ = map_reader_.occupancy_grid(map_margin_);
   current_obstacle_map_ = current_map_;
+  current_lidar_map_ = current_map_;
   reset_localization();
 
   ROS_INFO_STREAM("Reset localization successful. Particles generated: " << particles_.size());
@@ -125,7 +127,7 @@ void SLAMNode::map_update() {
 
   for(int i = 0; i < current_laser_scan_msg_->ranges.size(); ++i) {
     double range = current_laser_scan_msg_->ranges[i];
-    if(!std::isinf(range) && range <= current_laser_scan_msg_->range_max && range >= current_laser_scan_msg_->range_min) {
+    if(!std::isinf(range) && range <= current_laser_scan_msg_->range_max && range >= current_laser_scan_msg_->range_min && range >= 0.4) {
       ++count;
       if (count == skip+1) {
         double angle =  current_laser_scan_msg_->angle_min + i * current_laser_scan_msg_->angle_increment + lidar_angle;
@@ -145,10 +147,35 @@ void SLAMNode::map_update() {
     double laser_angle = yaw_est_ + laser_it->angle;
     fix_angle(laser_angle);
 
-    // check what's the expected range
-    ray_cast_update(current_obstacle_map_, x, y, laser_angle, laser_it->range, 2, 7);
-    // ray_cast_update_mult(current_map_, x, y, laser_angle, laser_it->range, 0.9, 1.5);
+    ray_cast_update(current_lidar_map_, x, y, laser_angle, laser_it->range, 2, 7);
   }
+
+
+  // point cloud transform
+  geometry_msgs::TransformStamped current_transform = transform_buffer_.lookupTransform("map", "base_link", pcl_conversions::fromPCL(current_point_cloud_msg_->header.stamp));
+
+  tf2::Quaternion orientation;
+  tf2::fromMsg(current_transform.transform.rotation, orientation);
+  tf2::Matrix3x3 rotation_matrix(orientation);
+  double roll, pitch, yaw;
+  rotation_matrix.getRPY(roll, pitch, yaw);
+
+  PointCloud transformed_pointcloud;
+  // clear point cloud view first
+  for(int angle = -30; angle < 30; ++angle) {
+    double total_angle = yaw + angle;
+    fix_angle(total_angle);
+    ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, angle, 0.6, 3, 0);
+  }
+
+  pcl_ros::transformPointCloud ("/map", pcl_conversions::fromPCL(current_point_cloud_msg_->header.stamp), *current_point_cloud_msg_, "/base_link", transformed_pointcloud, tf_listener_);
+  for(auto it=transformed_pointcloud.begin(); it != transformed_pointcloud.end(); ++it) {
+    double angle = std::atan2(it->y - current_transform.transform.translation.y, it->x - current_transform.transform.translation.x);
+    double range = std::sqrt(std::pow(it->x - current_transform.transform.translation.x, 2) + std::pow(it->y - current_transform.transform.translation.y,2));
+    ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, angle, range, 3, 7);
+    ROS_INFO_STREAM(angle << " " << range);
+  }
+
 }
 
 void SLAMNode::reset_localization() {
@@ -212,6 +239,11 @@ void SLAMNode::odometry_cb(const nav_msgs::Odometry::ConstPtr& msg) {
 
 void SLAMNode::laser_scan_cb(const sensor_msgs::LaserScan::ConstPtr& msg) {
   current_laser_scan_msg_ = msg;
+}
+
+
+void SLAMNode::pointcloud_cb(const PointCloud::ConstPtr& msg) {
+  current_point_cloud_msg_ = msg;
 }
 
 bool SLAMNode::motion_update() {
@@ -344,7 +376,7 @@ void SLAMNode::measurement_update() {
         fix_angle(laser_angle);
 
         // check what's the expected range
-        double range_expected = ray_cast(current_obstacle_map_, x, y, laser_angle);
+        double range_expected = ray_cast(current_lidar_map_, x, y, laser_angle);
         double range_error = laser_it->range - range_expected;
         if( particles_it - particles_.begin() == 1) {
           ROS_DEBUG_STREAM(range_error);

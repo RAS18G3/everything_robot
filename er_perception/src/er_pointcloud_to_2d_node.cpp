@@ -18,7 +18,7 @@ void PointCloudTo2DNode::pointcloud_cb(const PointCloud::ConstPtr& msg) {
   // remove all nan entrise (which correspond to now point), and threshold based on the defined height
   for(auto it=transformed_pointcloud.begin(); it != transformed_pointcloud.end(); ++it) {
     if(!std::isnan(it->x)) {
-      if(it-> z > min_height_ && it->z < min_height_+range_) {
+      if(it-> z > min_height_ && it->z < min_height_+range_ && std::sqrt(std::pow(it->x,2)+std::pow(it->y,2)) < 0.6) {
         it->z = 0;
         modified_pointcloud.push_back(*it);
       }

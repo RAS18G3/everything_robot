@@ -15,10 +15,16 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2_ros/transform_listener.h"
+#include "pcl_ros/point_cloud.h"
+#include "pcl/point_types.h"
+#include "pcl_conversions/pcl_conversions.h"
+#include "pcl_ros/transforms.h"
 
 #include <string>
 #include <vector>
 #include <random>
+
+typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 class SLAMNode {
 public:
@@ -36,6 +42,7 @@ private:
   void publish_transform();
   void odometry_cb(const nav_msgs::Odometry::ConstPtr& msg);
   void laser_scan_cb(const sensor_msgs::LaserScan::ConstPtr& msg);
+  void pointcloud_cb(const PointCloud::ConstPtr& msg);
   bool motion_update();
   void measurement_update();
   void resample();
@@ -61,17 +68,21 @@ private:
   ros::Publisher particles_publisher_;
   ros::Subscriber odometry_subscriber_;
   ros::Subscriber laser_scan_subscriber_;
+  ros::Subscriber pointcloud_subscriber_;
   ros::Rate loop_rate_;
   ros::ServiceServer reset_localization_service_;
   tf2_ros::TransformBroadcaster transform_broadcaster_;
   tf2_ros::Buffer transform_buffer_;
   tf2_ros::TransformListener transform_listener_;
+  tf::TransformListener tf_listener_;
 
   nav_msgs::OccupancyGrid current_map_;
+  nav_msgs::OccupancyGrid current_lidar_map_;
   nav_msgs::OccupancyGrid current_obstacle_map_;
   geometry_msgs::TransformStamped current_odomotry_msg_;
   geometry_msgs::TransformStamped last_odometry_msg_;
   sensor_msgs::LaserScan::ConstPtr current_laser_scan_msg_;
+  PointCloud::ConstPtr current_point_cloud_msg_;
 
   MapReader map_reader_;
 

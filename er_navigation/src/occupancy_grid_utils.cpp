@@ -22,6 +22,18 @@ void draw_line(nav_msgs::OccupancyGrid &occupancy_grid, double x_start, double x
   }
 }
 
+nav_msgs::OccupancyGrid merge_maps(nav_msgs::OccupancyGrid &occupancy_grid_1, nav_msgs::OccupancyGrid &occupancy_grid_2) {
+  nav_msgs::OccupancyGrid merged_grid = occupancy_grid_1;
+
+  for(int x=0; x<merged_grid.info.width; ++x) {
+    for(int y=0; y<merged_grid.info.height; ++y) {
+      at(merged_grid, x, y) = at(occupancy_grid_2, x, y) > at(merged_grid, x, y) ? at(occupancy_grid_2, x, y) : at(merged_grid, x, y);
+    }
+  }
+
+  return merged_grid;
+}
+
 double ray_cast_update_mult(nav_msgs::OccupancyGrid &occupancy_grid, double x, double y, double angle, double range, double decrease, double increase) {
   // find starting grid index
   x = (x - occupancy_grid.info.origin.position.x) / occupancy_grid.info.resolution;

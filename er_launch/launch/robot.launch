@@ -44,17 +44,17 @@
 
   <node name="slam" pkg="er_navigation" type="er_slam_node" output="screen">
     <param name="map_file" value="$(find ras_maze_map)/maps/lab_maze_2018.txt" />
-    <param name="particles_per_m2" value="1000" />
+    <param name="particles_per_m2" value="2000" />
     <param name="odometry_topic" value="/wheel_odometry" />
     <param name="laser_scan_topic" value="/scan" />
     <param name="laser_sigma" value="0.1" />
-    <param name="alpha_rot_rot" value="0.000005" />
-    <param name="alpha_rot_trans" value="0.000005" />
-    <param name="alpha_trans_rot" value="0.000005" />
-    <param name="alpha_trans_trans" value="0.000005" />
-    <param name="gaussian_pos" value="0.0025" />
-    <param name="gaussian_rot" value="0.005" />
-    <param name="tracking_particles" value="200" />
+    <param name="alpha_rot_rot" value="0.05" />
+    <param name="alpha_rot_trans" value="0.05" />
+    <param name="alpha_trans_rot" value="0.00005" />
+    <param name="alpha_trans_trans" value="0.00005" />
+    <param name="gaussian_pos" value="0.005" />
+    <param name="gaussian_rot" value="0.05" />
+    <param name="tracking_particles" value="300" />
     <param name="tracking_threshold" value="0.05" />
     <param name="beam_count" value="14" />
   </node>

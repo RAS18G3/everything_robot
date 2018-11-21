@@ -12,6 +12,14 @@ void fix_angle(double& angle) {
       angle -= M_PI;
 }
 
+void fix_angle_2(double& angle) {
+    angle = std::fmod(angle + M_PI/2.0, M_PI);
+    if (angle < 0)
+        angle += M_PI/2;
+    else
+      angle -= M_PI/2;
+}
+
 /* evaluate the normal distributions pdf
  * sigma is standard deviation
  */
@@ -89,6 +97,7 @@ void SLAMNode::run_node() {
     }
 
     map_publisher_.publish(current_obstacle_map_);
+    // map_publisher_.publish(current_obstacle_map_);
 
 
     loop_rate_.sleep();
@@ -111,13 +120,19 @@ bool SLAMNode::reset_localization_cb(std_srvs::Trigger::Request& request, std_sr
 void SLAMNode::map_update() {
   // first find all valid laser scans in the current message
   std::vector<LaserScan> laser_scans;
+  int skip = 1;
+  int count = 0;
 
   for(int i = 0; i < current_laser_scan_msg_->ranges.size(); ++i) {
     double range = current_laser_scan_msg_->ranges[i];
     if(!std::isinf(range) && range <= current_laser_scan_msg_->range_max && range >= current_laser_scan_msg_->range_min) {
-      double angle =  current_laser_scan_msg_->angle_min + i * current_laser_scan_msg_->angle_increment + lidar_angle;
-      fix_angle(angle);
-      laser_scans.emplace_back(range, angle);
+      ++count;
+      if (count == skip+1) {
+        double angle =  current_laser_scan_msg_->angle_min + i * current_laser_scan_msg_->angle_increment + lidar_angle;
+        fix_angle(angle);
+        laser_scans.emplace_back(range, angle);
+        count = 0;
+      }
     }
   }
 
@@ -131,7 +146,7 @@ void SLAMNode::map_update() {
     fix_angle(laser_angle);
 
     // check what's the expected range
-    ray_cast_update(current_obstacle_map_, x, y, laser_angle, laser_it->range, 3, 5);
+    ray_cast_update(current_obstacle_map_, x, y, laser_angle, laser_it->range, 2, 7);
     // ray_cast_update_mult(current_map_, x, y, laser_angle, laser_it->range, 0.9, 1.5);
   }
 }
@@ -191,8 +206,8 @@ void SLAMNode::publish_particles() {
 void SLAMNode::odometry_cb(const nav_msgs::Odometry::ConstPtr& msg) {
   // first check if there is a previous odometry msg
   // we will use the position difference to that to calculate the movement between two odometry messages
-  /*current_odomotry_msg_ = msg;
-  last_odometry_msg_ = current_odomotry_msg_;*/
+  // current_odomotry_msg_ = msg;
+  // last_odometry_msg_ = current_odomotry_msg_;
 }
 
 void SLAMNode::laser_scan_cb(const sensor_msgs::LaserScan::ConstPtr& msg) {
@@ -234,6 +249,18 @@ bool SLAMNode::motion_update() {
       double delta_trans = std::sqrt( std::pow(x2 - x1, 2) + std::pow(y2 - y1, 2) );
       double delta_rot2 = yaw2 - yaw1 - delta_rot1;
 
+      double delta_rot = yaw2 - yaw1;
+      fix_angle(delta_rot);
+      delta_rot1 = delta_rot/2;
+      delta_rot2 = delta_rot/2;
+
+      double forward=1;
+      if(std::abs(x1 + delta_trans*cos(yaw1 + delta_rot1) - x2) > 0.001) {
+        forward = -1;
+        ROS_INFO_STREAM("backward");
+      }
+
+
       // create noise generators
       std::default_random_engine generator;
       std::normal_distribution<double> rot1_noise(0,std::sqrt( alpha_rot_rot_ * std::pow(delta_rot1,2) + alpha_trans_rot_ * std::pow(delta_trans,2)));
@@ -248,8 +275,8 @@ bool SLAMNode::motion_update() {
         delta_rot2_hat = delta_rot2 + rot2_noise(generator);
 
         // update the particle
-        it->x = it->x + delta_trans_hat*cos(it->theta + delta_rot1_hat);
-        it->y = it->y + delta_trans_hat*sin(it->theta + delta_rot1_hat);
+        it->x = it->x + delta_trans_hat*cos(it->theta + delta_rot1_hat)*forward;
+        it->y = it->y + delta_trans_hat*sin(it->theta + delta_rot1_hat)*forward;
         it->theta = it->theta + delta_rot1_hat + delta_rot2_hat;
         fix_angle(it->theta);
       }
@@ -317,11 +344,11 @@ void SLAMNode::measurement_update() {
         fix_angle(laser_angle);
 
         // check what's the expected range
-        double range_expected = ray_cast(current_map_, x, y, laser_angle);
+        double range_expected = ray_cast(current_obstacle_map_, x, y, laser_angle);
         double range_error = laser_it->range - range_expected;
         if( particles_it - particles_.begin() == 1) {
           ROS_DEBUG_STREAM(range_error);
-          ROS_INFO_STREAM(range_error << " -> " << evaluate_gaussian(range_error, laser_sigma_));
+          // ROS_INFO_STREAM(range_error << " -> " << evaluate_gaussian(range_error, laser_sigma_));
         }
         // adjust the weight of the particle based on how likely that measurement is
         // 0.2 is to add a given probability for it to be an outlier

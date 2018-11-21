@@ -33,6 +33,7 @@ int height;
 double resolution;
 double offsetX;
 double offsetY;
+nav_msgs::OccupancyGrid map_msg;
 std::vector<int8_t> map;
 std::vector<int8_t> fog_map;
 
@@ -58,8 +59,8 @@ PositionVector_int index2pos(int index){
   return pos;
 }
 PositionVector grid_pos2coordinates(int xg, int yg){
-  double x = xg*resolution;
-  double y = yg*resolution;
+  double x = xg*resolution+offsetX;
+  double y = yg*resolution+offsetY;
 
   PositionVector coordinates;
 
@@ -82,46 +83,8 @@ double point_dist(double x1, double y1, double x2, double y2)
   return (x1+y1);
 }
 
-bool point_coll(double x1, double y1, double x2, double y2, int collThresh)
-// checks for collision between points by stepping along a vector
-{
-  int x,y; // for indeces
-  double vec_x = x2-x1; // dx
-  double vec_y = y2-y1; // dy
 
-  // normalize vector
-  double vec_magnitude = 2*sqrt(vec_x*vec_x + vec_y*vec_y);
-  vec_x /= vec_magnitude;
-  vec_y /= vec_magnitude;
-
-  while(1)
-  {
-
-    // step once along vector
-    x1 += vec_x;
-    y1 += vec_y;
-    double d = point_dist(x1,y1,x2,y2);
-    //if (point_dist(x1, y1, x2, y2) < 1)
-
-    if(d<0.1)
-    // short distance . we are at the goal
-    {
-
-      break;
-    }
-    // basic rounding of indeces (recasting.floor)
-    int x_floor = (int) x1;
-    int y_floor = (int) y1;
-
-    if (map[x_floor + y_floor*width] > collThresh)
-    {
-      return true;
-    }
-  }
-  return false; // fall through case
-}
-
-double ray_cast double x, double y, double angle, double error_value) {
+double ray_cast(double x, double y, double angle, double error_value) {
   // find starting grid index
   x = (x - offsetX) / resolution;
   y = (y - offsetY) / resolution;
@@ -151,7 +114,7 @@ double ray_cast double x, double y, double angle, double error_value) {
 
   // iterate over the line until there is an obstacle (note there should always be one, since we are inside the maze)
   try {
-    while(at(occupancy_grid, x_discrete, y_discrete) < 50) {
+    while(map.at(pos2index(x_discrete,y_discrete)) < 50) {
       if(t_max_x < t_max_y) {
         t_max_x = t_max_x + t_delta_x;
         x_discrete = x_discrete + step_x;
@@ -199,8 +162,8 @@ void get_grid_position(){
   pos_x = transformStamped.transform.translation.x;
   pos_y = transformStamped.transform.translation.y;*/
 
-  pos_x = 1;
-  pos_y = 1;
+  pos_x = 2.0;
+  pos_y = 0.2;
 
   x_grid = (int)((pos_x-offsetX) / resolution);
   y_grid = (int)((pos_y-offsetY) / resolution);
@@ -226,11 +189,12 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
     //mark seen area in fog_map
     ROS_INFO("mark area in fog map");
     int grid_radius = (int)mapped_radius/resolution;
+    ROS_INFO("grid radius %d", grid_radius);
 
-    for(int xi = 0; xi < 25; xi++){
-      for(int yi = 0; yi < 25; yi++){
+    for(int xi = 0; xi <= 25; ++xi){
+      for(int yi = 0; yi <= 25; ++yi){
         std::vector<int> xg_values= {x_grid+xi, x_grid+xi, x_grid-xi, x_grid-xi};
-        std::vector<int> yg_values= {x_grid+yi, x_grid-yi, x_grid-yi, x_grid+yi};
+        std::vector<int> yg_values= {y_grid+yi, y_grid-yi, y_grid-yi, y_grid+yi};
         for(int i = 0; i < 4; i++){
         int xg = xg_values.at(i);
         int yg = yg_values.at(i);
@@ -241,9 +205,9 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
           int dist = pow(x_grid-xg,2)+pow(y_grid-yg,2);
           bool collision = false;
 
-          double angle2point = atan2(pos_x-x, pos_y-y);
-          double ray = ray_cast(pos_x, pos_y, angle2point, 10);
-          if(ray < sqrt(pow(pos_x-x,2)+pow(pos_y-y,2)){
+          double angle2point = atan2(y-pos_y, x-pos_x);
+          double ray = ray_cast(pos_x, pos_y, angle2point, 1000);
+          if(ray+resolution < sqrt(pow(pos_x-x,2)+pow(pos_y-y,2))){
             collision = true;
           }
 

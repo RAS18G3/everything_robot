@@ -9,6 +9,7 @@
 #include <actionlib/client/simple_action_client.h>
 #include "er_planning/PathGoal.h"
 #include "er_planning/PathAction.h"
+#include "er_planning/PathActionGoal.h"
 
 struct PositionVector
 {
@@ -46,16 +47,23 @@ void goto_point(double x, double y){
 
   ros::NodeHandle n;
   ros::ServiceClient client = n.serviceClient<nav_msgs::GetPlan>("/pathfinder/find_path");
-  nav_msgs::GetPlan req;
-  req.request.start.pose.position.x = pos_x;
-  req.request.start.pose.position.y = pos_y;
-  req.request.goal.pose.position.x = x;
-  req.request.goal.pose.position.y = y;
-  nav_msgs::GetPlan::Response plan;
-  client.call(req);
+  nav_msgs::GetPlan srv;
+  srv.request.start.pose.position.x = pos_x;
+  srv.request.start.pose.position.y = pos_y;
+  srv.request.goal.pose.position.x = x;
+  srv.request.goal.pose.position.y = y;
+
+  ROS_INFO("pos_x %f", pos_x);
+  ROS_INFO("pos_y %f", pos_y);
+  ROS_INFO("x %f", x);
+  ROS_INFO("y %f", y);
+
+  client.call(srv);
   ROS_INFO("got plan");
 
-  req.response = plan;
+  nav_msgs::Path plan;
+  plan = srv.response.plan;
+
 
  //execute plan
  actionlib::SimpleActionClient<er_planning::PathAction> ac("path", true);
@@ -67,19 +75,22 @@ void goto_point(double x, double y){
 ROS_INFO("done waiting");
 
  er_planning::PathActionGoal goal;
- goal.Path = plan.plan;
+ goal.goal.Path = plan;
  ROS_INFO("sending goal..");
- ac.sendGoal(goal);
+ ac.sendGoal(goal.goal);
  ROS_INFO("sent goal");
 
-bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+  bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+  ROS_INFO("Im done waiting for result");
 
 if (finished_before_timeout)
 {
   actionlib::SimpleClientGoalState state = ac.getState();
   ROS_INFO("Action finished: %s",state.toString().c_str());
 }
-else{ROS_INFO("Action did not finish before the time out.");}
+else{
+  ROS_INFO("Action did not finish before the time out.");
+}
 }
 
 int pos2index(int xg, int yg){
@@ -173,10 +184,6 @@ double ray_cast(double x, double y, double angle, double error_value) {
 
 }
 
-int find_next_cell(){
-
-}
-
 void grid_callback(const nav_msgs::OccupancyGrid::ConstPtr occupancy_grid){
   ROS_INFO("we got the map");
   width = occupancy_grid -> info.width;
@@ -210,7 +217,6 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
   ros::NodeHandle n;
   ros::Subscriber grid_subscriber = n.subscribe("/slam/occupancy_grid", 1, grid_callback);
   ros::Publisher fog_map_publisher = n.advertise<nav_msgs::OccupancyGrid>("fog_map", 1);
-  ros::Rate loop_rate(10);
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
 
@@ -225,7 +231,6 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
     }
 
     ros::spinOnce();
-    loop_rate.sleep();
 
     if(width != 0){
     //get current position
@@ -293,7 +298,9 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
           }
         }
       }
-      PositionVector_int next_pos = index2pos(next_cell);
+      PositionVector_int next_grid_pos = index2pos(next_cell);
+      PositionVector next_pos = grid_pos2coordinates(next_grid_pos.PosX, next_grid_pos.PosY);
+
       goto_point(next_pos.PosX, next_pos.PosY);
       fog_map.at(next_cell) = 8;
 

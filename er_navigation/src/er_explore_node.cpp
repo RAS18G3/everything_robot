@@ -21,7 +21,6 @@ struct PositionVector_int
   int PosY;
 };
 
-ros::NodeHandle* npointer;
 ros::Duration timeout(3.0);
 
 ros::ServiceServer explore_srv;
@@ -70,6 +69,9 @@ ROS_INFO("done waiting");
  ROS_INFO("sending goal..");
  ac.sendGoal(goal);
  ROS_INFO("sent goal");
+
+ ROS_INFO("from x %f", goal.Path.poses[0].pose.position.x);
+ ROS_INFO("to x %f", goal.Path.poses[1].pose.position.x);
 
   bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
 

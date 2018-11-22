@@ -23,6 +23,7 @@
   <depend>tf</depend>
   <depend>geometry_msgs</depend>
   <depend>er_planning</depend>
+  <depend>actionlib</depend>
 
   <export>
 

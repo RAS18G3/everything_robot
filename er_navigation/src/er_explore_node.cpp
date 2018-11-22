@@ -43,6 +43,8 @@ std::vector<int8_t> fog_map;
 
 void goto_point(double x, double y){
  //find path
+ ROS_INFO("going to point");
+
   ros::NodeHandle n;
   ros::ServiceClient client = n.serviceClient<nav_msgs::GetPlan>("/pathfinder/find_path");
   nav_msgs::GetPlan req;
@@ -52,17 +54,32 @@ void goto_point(double x, double y){
   req.request.goal.pose.position.y = y;
   nav_msgs::GetPlan::Response plan;
   client.call(req);
+  ROS_INFO("got plan");
 
   req.response = plan;
 
  //execute plan
  actionlib::SimpleActionClient<er_planning::PathAction> ac("path", true);
+ ROS_INFO("waiting for server");
 
  ac.waitForServer();
+ROS_INFO("done waiting");
 
  er_planning::PathGoal goal;
  goal.Path = plan.plan;
+ ROS_INFO("sending goal..");
  ac.sendGoal(goal);
+ ROS_INFO("sent goal");
+
+  bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+
+ if (finished_before_timeout)
+{
+  actionlib::SimpleClientGoalState state = ac.getState();
+  ROS_INFO("Action finished: %s",state.toString().c_str());
+}
+else
+  ROS_INFO("Action did not finish before the time out.");
 }
 
 int pos2index(int xg, int yg){
@@ -157,7 +174,7 @@ double ray_cast(double x, double y, double angle, double error_value) {
 }
 
 int find_next_cell(){
-  
+
 }
 
 void grid_callback(const nav_msgs::OccupancyGrid::ConstPtr occupancy_grid){
@@ -174,17 +191,7 @@ void grid_callback(const nav_msgs::OccupancyGrid::ConstPtr occupancy_grid){
 
 }
 
-void get_grid_position(){
-  tf2_ros::Buffer tfBuffer;
-  tf2_ros::TransformListener tfListener(tfBuffer);
-  //TRANSFORM
-  geometry_msgs::TransformStamped transformStamped;
-  try{
-    transformStamped = tfBuffer.lookupTransform("map","base_link", ros::Time(0));
-  }
-  catch (tf2::TransformException &ex) {
-    ROS_WARN("%s",ex.what());
-  }
+void get_grid_position(geometry_msgs::TransformStamped transformStamped){
 
   // position coordinates
   pos_x = transformStamped.transform.translation.x;
@@ -204,15 +211,26 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
   ros::Subscriber grid_subscriber = n.subscribe("/slam/occupancy_grid", 1, grid_callback);
   ros::Publisher fog_map_publisher = n.advertise<nav_msgs::OccupancyGrid>("fog_map", 1);
   ros::Rate loop_rate(10);
+  tf2_ros::Buffer tfBuffer;
+  tf2_ros::TransformListener tfListener(tfBuffer);
 
   while(DONE == false){
+    //TRANSFORM
+    geometry_msgs::TransformStamped transformStamped;
+    try{
+      transformStamped = tfBuffer.lookupTransform("map","base_link", ros::Time(0));
+    }
+    catch (tf2::TransformException &ex) {
+      ROS_WARN("%s",ex.what());
+    }
+
     ros::spinOnce();
     loop_rate.sleep();
 
     if(width != 0){
     //get current position
     ROS_INFO("get position");
-    get_grid_position();
+    get_grid_position(transformStamped);
 
     //mark seen area in fog_map
     ROS_INFO("mark area in fog map");
@@ -275,6 +293,8 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
           }
         }
       }
+      PositionVector_int next_pos = index2pos(next_cell);
+      goto_point(next_pos.PosX, next_pos.PosY);
       fog_map.at(next_cell) = 8;
 
       if(found_cell == false){

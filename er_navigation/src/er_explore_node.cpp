@@ -146,17 +146,7 @@ void grid_callback(const nav_msgs::OccupancyGrid::ConstPtr occupancy_grid){
 
 }
 
-void get_grid_position(){
-  tf2_ros::Buffer tfBuffer;
-  tf2_ros::TransformListener tfListener(tfBuffer);
-  //TRANSFORM
-  geometry_msgs::TransformStamped transformStamped;
-  try{
-    transformStamped = tfBuffer.lookupTransform("map","base_link", ros::Time(0));
-  }
-  catch (tf2::TransformException &ex) {
-    ROS_WARN("%s",ex.what());
-  }
+void get_grid_position(geometry_msgs::TransformStamped transformStamped){
 
   // position coordinates
   pos_x = transformStamped.transform.translation.x;
@@ -176,15 +166,26 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
   ros::Subscriber grid_subscriber = n.subscribe("/slam/occupancy_grid", 1, grid_callback);
   ros::Publisher fog_map_publisher = n.advertise<nav_msgs::OccupancyGrid>("fog_map", 1);
   ros::Rate loop_rate(10);
+  tf2_ros::Buffer tfBuffer;
+  tf2_ros::TransformListener tfListener(tfBuffer);
 
   while(DONE == false){
+    //TRANSFORM
+    geometry_msgs::TransformStamped transformStamped;
+    try{
+      transformStamped = tfBuffer.lookupTransform("map","base_link", ros::Time(0));
+    }
+    catch (tf2::TransformException &ex) {
+      ROS_WARN("%s",ex.what());
+    }
+
     ros::spinOnce();
     loop_rate.sleep();
 
     if(width != 0){
     //get current position
     ROS_INFO("get position");
-    get_grid_position();
+    get_grid_position(transformStamped);
 
     //mark seen area in fog_map
     ROS_INFO("mark area in fog map");

@@ -43,6 +43,8 @@ std::vector<int8_t> fog_map;
 
 void goto_point(double x, double y){
  //find path
+ ROS_INFO("going to point");
+
   ros::NodeHandle n;
   ros::ServiceClient client = n.serviceClient<nav_msgs::GetPlan>("/pathfinder/find_path");
   nav_msgs::GetPlan req;
@@ -52,20 +54,32 @@ void goto_point(double x, double y){
   req.request.goal.pose.position.y = y;
   nav_msgs::GetPlan::Response plan;
   client.call(req);
+  ROS_INFO("got plan");
 
   req.response = plan;
 
  //execute plan
  actionlib::SimpleActionClient<er_planning::PathAction> ac("path", true);
+ ROS_INFO("waiting for server");
 
  ac.waitForServer();
+ROS_INFO("done waiting");
 
  er_planning::PathGoal goal;
  goal.Path = plan.plan;
+ ROS_INFO("sending goal..");
  ac.sendGoal(goal);
+ ROS_INFO("sent goal");
 
+  bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
 
-
+ if (finished_before_timeout)
+{
+  actionlib::SimpleClientGoalState state = ac.getState();
+  ROS_INFO("Action finished: %s",state.toString().c_str());
+}
+else
+  ROS_INFO("Action did not finish before the time out.");
 }
 
 int pos2index(int xg, int yg){
@@ -275,6 +289,8 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
           }
         }
       }
+      PositionVector_int next_pos = index2pos(next_cell);
+      goto_point(next_pos.PosX, next_pos.PosY);
       fog_map.at(next_cell) = 8;
 
       if(found_cell == false){

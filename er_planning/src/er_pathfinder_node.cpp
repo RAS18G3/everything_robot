@@ -19,6 +19,7 @@ ros::Duration timeout(3.0);
 double time_start, time_now;
 
 double dilute_threshold;
+double intermediate_dist = 2; // approx dist btw two intermediate nodes in grid units
 
 ros::Publisher pathfinderMap_pub;
 ros::Publisher pathfinderPath_pub;
@@ -35,14 +36,13 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
   nav_msgs::OccupancyGrid undiluted_grid = occupancy_grid;
   occupancy_grid = diluteMap(occupancy_grid, dilute_threshold);
 
-
   // unpack map info
   int width = occupancy_grid.info.width;
   int height = occupancy_grid.info.height;
   double resolution = occupancy_grid.info.resolution;
   double offsetX = occupancy_grid.info.origin.position.x;
   double offsetY = occupancy_grid.info.origin.position.y;
-  std::vector<int8_t>& map = occupancy_grid.data;
+  std::vector<int8_t> map = occupancy_grid.data;
 
   // save start and goal in local positions (i.e. array indeces)
   double xStart = (req.start.pose.position.x-offsetX)/resolution;
@@ -80,34 +80,44 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
 
   while(time_now-time_start < MAX_TIME)
   {
-    TreeNode newNode = generateNode(tree, map, width, height, COLL_THRESH);
-    if( newNode.x == 0 )
-    // timed out
-    {
-      break;
-    }
-    tree.addNode(newNode);
+    time_now = ros::Time::now().toSec();
 
-    if(!point_coll(newNode.x, newNode.y, xGoal, yGoal, map, width, height, COLL_THRESH))
+    TreeNode newNode = generateNode(tree, map, width, height, COLL_THRESH);
+    if( newNode.x == -1 ){ break; } // timed out
+    //tree.addNode(newNode);
+
+    // generate intermediate nodes
+    tree = intermediateNodes(tree, newNode, intermediate_dist);
+
+    if(!point_coll(tree.nodes[tree.size-1].x, tree.nodes[tree.size-1].y, xGoal, yGoal, map, width, height, COLL_THRESH))
+    // newest node has direct path to goal
     {
-      TreeNode lastNode = {xGoal, yGoal, newNode.depth+1, tree.size-1};
-      tree.addNode(lastNode);
+      // add last node - goal itself
+      TreeNode lastNode = {xGoal, yGoal, tree.nodes[tree.size-1].depth+1, tree.size-1};
+      //tree.addNode(lastNode);
+      tree = intermediateNodes(tree, lastNode, intermediate_dist);
+
+
+      // create path from node list
       nav_msgs::Path foundPath;
       foundPath.header = occupancy_grid.header;
       foundPath.poses = unpackPath(tree);
       foundPath.poses = smoothPath(foundPath.poses, occupancy_grid, COLL_THRESH);
       foundPath.poses = scalePath(foundPath.poses, offsetX, offsetY, resolution);
+
       res.plan = foundPath;
+
       if(DEBUG==1)
       {
         time_now = ros::Time::now().toSec();
         pathfinderMap_pub.publish(occupancy_grid);
         pathfinderPath_pub.publish(foundPath);
-        ROS_INFO("Path found and published in %lf s.", time_now-time_start);
+        ROS_INFO_STREAM("Path found, length: "<<lastNode.depth+1);
+        ROS_INFO_STREAM("After smoothing: " <<foundPath.poses.size());
+        ROS_INFO_STREAM("Pathfinding executed in "<< time_now-time_start<<"s");
       }
       return true;
     }
-    time_now = ros::Time::now().toSec();
   }
   if( DEBUG==1 ){ ROS_INFO("No path found."); }
   return false;
@@ -123,7 +133,7 @@ int main(int argc, char **argv)
   pathfinder_srv = n.advertiseService("/pathfinder/find_path", &path_callback);
 
   // load parameter
-  ros::param::param<double>("~dilusion_radius", dilute_threshold, 0.2);
+  ros::param::param<double>("~dilusion_radius", dilute_threshold, 0.15);
 
   // only for Rviz debug
   pathfinderMap_pub = n.advertise<nav_msgs::OccupancyGrid>("/pathfinder_map",1);

@@ -29,8 +29,8 @@ bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> 
 
   // normalize vector
   double vec_magnitude = 2*sqrt(vec_x*vec_x + vec_y*vec_y);
-  vec_x /= vec_magnitude;
-  vec_y /= vec_magnitude;
+  vec_x /= 2*vec_magnitude;
+  vec_y /= 2*vec_magnitude;
 
   while(1)
   {
@@ -58,11 +58,15 @@ bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> 
 TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int height, int collThresh)
 // generate RRT node randomly, return nullptr if unsuccesful
 {
-  ROS_INFO("start generate node");
+  // timeout check
+  double time_start, time_now;
+  time_start = ros::Time::now().toSec();
+  time_now = ros::Time::now().toSec();
+
   int tree_size = tree.size;
-  while(1)
+  while(time_now-time_start < 10)
   {
-    // ROS_INFO("generating node...");
+    time_now = ros::Time::now().toSec();
     // generate random x and y
     double x = rand() % width+1;
     double y = rand() % height+1;
@@ -101,23 +105,51 @@ TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int heigh
       if ( !point_coll(x, y, x_node, y_node, map, width, height, collThresh) )
       // this node is valid!
       {
-        int depth = tree.nodes[closest_index].depth+1;
-        TreeNode newNode = {x, y, depth, closest_index};
-
+        TreeNode newNode = {x, y, tree.nodes[closest_index].depth+1, closest_index};
         return newNode;
-        break;
       }
 
       // fall through, erase closest point from list if invalid
       dists.erase(std::begin(dists)+closest_index);
     }
   }
+  // fallthrough failed case
+  TreeNode newNode = {-1,-1,-1,-1};
+  return newNode;
+}
+
+RRTree intermediateNodes(RRTree tree, TreeNode newNode, double step_dist)
+// creates intermediate nodes btw newNode and its parent, with interdistance step_dist
+{
+  int parent_index = newNode.parent_index;
+  TreeNode parentNode = tree.nodes[parent_index];
+
+  // x- and y-componentes of vec from newNode to parent
+  double xvec = newNode.x - parentNode.x;
+  double yvec = newNode.y - parentNode.y;
+
+  // steps = total amount of new nodes, placed ca step_dist apart
+  int steps = (int) (sqrt(xvec*xvec+yvec*yvec)/step_dist);
+
+  // rescale vector for single steps
+  xvec /= steps;
+  yvec /= steps;
+
+  for(int i=0; i<steps; i++)
+  // creates intermediate nodes and pushes them to tree, including newNode
+  {
+    TreeNode interNode = {parentNode.x+xvec, parentNode.y+yvec, parentNode.depth+1, parent_index};
+    tree.addNode(interNode);
+    parent_index = tree.size-1;
+    parentNode = tree.nodes[parent_index];
+  }
+  return tree;
 }
 
 nav_msgs::OccupancyGrid diluteMap(nav_msgs::OccupancyGrid occupancy_grid, double diluteThresh)
-// SUPER-lazy map dilution
+// _improved_ map dilution
 {
-  // lazy copy of original map
+  // copy of original map
   nav_msgs::OccupancyGrid dilutedMap = occupancy_grid;
 
   // unpack
@@ -126,25 +158,39 @@ nav_msgs::OccupancyGrid diluteMap(nav_msgs::OccupancyGrid occupancy_grid, double
   double resolution = occupancy_grid.info.resolution;
   std::vector<int8_t> mapOrig = occupancy_grid.data;
   std::vector<int8_t> mapNew = occupancy_grid.data;
+  int dilRange = (int) (diluteThresh/resolution); // blob radius
 
-  int dilRange = (int) (diluteThresh/resolution); // length of blob side
+  int x, y;
+  int dist, circ_ind;
+  int dilRangeSq = dilRange*dilRange;
+  std::vector<int> circ_inds;
 
-  int w1, w2, wmin, wmax, h1, h2, hmin, hmax;//
-
-  for(w1 = 0; w1 < width; w1++)
+  // generate local indeces for a circle with dilRange radius
+  for(x=-dilRange; x<dilRange; x++)
   {
-    wmin = std::max(w1-dilRange,0);
-    wmax = std::min(w1+dilRange,width-1);
-    for(h1 = 0; h1 < height; h1++)
+    for(y=-dilRange; y<dilRange; y++)
     {
-      hmin = std::max(h1-dilRange,0);
-      hmax = std::min(h1+dilRange,height-1);
-      for(w2 = wmin; w2 < wmax; w2++)
+      dist = x*x + y*y; // no sqrt for quicker calc
+      circ_ind = x+width*y;
+      if(dist < dilRangeSq){ circ_inds.push_back(circ_ind); }
+    }
+  }
+
+  int ind, map_ind;
+  int ind_max = width*height;
+  int circ_size = circ_inds.size();
+
+  for(ind=0; ind<ind_max; ind++)
+  // for each occupied point, create a circle of occupied points around it
+  {
+    if(mapOrig[ind]<50){ continue; } // skip if not occupied, hardcoded thresh
+    for( circ_ind=0; circ_ind<circ_size; circ_ind++ )
+    {
+      map_ind = ind+circ_inds[circ_ind]; // "global" index
+      if(map_ind > -1 && map_ind < ind_max )
+      // out-of-bounds check
       {
-        for(h2 = hmin; h2 < hmax; h2++)
-        {
-          mapNew[w2 + h2*width] = std::max(mapOrig[w1 + h1*width], mapNew[w2 + h2*width]);
-        }
+        mapNew[map_ind] = mapOrig[ind];
       }
     }
   }
@@ -153,7 +199,7 @@ nav_msgs::OccupancyGrid diluteMap(nav_msgs::OccupancyGrid occupancy_grid, double
 }
 
 std::vector<geometry_msgs::PoseStamped> unpackPath(RRTree tree)
-// assumes last node points is at goal and unpacks that path
+// assumes last node points at goal and unpacks that path
 {
   int tree_size = tree.size;
   TreeNode currentNode = tree.nodes[tree_size-1];
@@ -177,6 +223,42 @@ std::vector<geometry_msgs::PoseStamped> unpackPath(RRTree tree)
   return poses;
 }
 
+std::vector<geometry_msgs::PoseStamped> smoothPath(std::vector<geometry_msgs::PoseStamped> path, nav_msgs::OccupancyGrid map, int collThresh)
+// improved path smoother, more aggresive but also heavier
+{
+  double x1, x2, y1, y2;
+  std::vector<geometry_msgs::PoseStamped> newPath = path;
+  int size = newPath.size();
+  bool changed = true;
+
+  while( changed && size>2)
+  {
+    size = newPath.size();
+    changed = false;
+    for(int i=0; i < size-2; i++)
+    {
+      // now looks for the furthest point possible to cut out
+      for(int j=size-1; j > i+1; j--)
+      {
+        x1 = newPath[i].pose.position.x;
+        y1 = newPath[i].pose.position.y;
+        x2 = newPath[j].pose.position.x;
+        y2 = newPath[j].pose.position.y;
+        if( !point_coll(x1, y1, x2, y2, map.data, map.info.width, map.info.height, collThresh) )
+        // destroy all the points inbetween
+        {
+          for(int k=j-1; k>i; k--){ newPath.erase(std::begin(newPath)+k); }
+          changed = true;
+        }
+        if(changed){ break; }
+      }
+      if(changed){ break; }
+    }
+  }
+  return newPath;
+}
+
+/* OLD SMOOTHING
 std::vector<geometry_msgs::PoseStamped> smoothPath(std::vector<geometry_msgs::PoseStamped> path, nav_msgs::OccupancyGrid map, int collThresh)
 // simple path smoother
 {
@@ -205,8 +287,10 @@ std::vector<geometry_msgs::PoseStamped> smoothPath(std::vector<geometry_msgs::Po
   }
   return newPath;
 }
+*/
 
 std::vector<geometry_msgs::PoseStamped> scalePath(std::vector<geometry_msgs::PoseStamped> path, double offsetX, double offsetY, double resolution)
+// rescales path from grid indeces to global positions
 {
   std::vector<geometry_msgs::PoseStamped> newPath = path;
   int size = newPath.size();

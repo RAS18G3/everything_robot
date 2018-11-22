@@ -1,10 +1,14 @@
 #include "ros/ros.h"
 #include "std_srvs/Trigger.h"
 #include "nav_msgs/OccupancyGrid.h"
+#include "nav_msgs/GetPlan.h"
 #include "geometry_msgs/TransformStamped.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2_ros/transform_listener.h"
+#include <actionlib/client/simple_action_client.h>
+#include "er_planning/PathGoal.h"
+#include "er_planning/PathAction.h"
 
 struct PositionVector
 {
@@ -38,7 +42,30 @@ std::vector<int8_t> map;
 std::vector<int8_t> fog_map;
 
 void goto_point(double x, double y){
- //Do something good
+ //find path
+  ros::NodeHandle n;
+  ros::ServiceClient client = n.serviceClient<nav_msgs::GetPlan>("/pathfinder/find_path");
+  nav_msgs::GetPlan req;
+  req.request.start.pose.position.x = pos_x;
+  req.request.start.pose.position.y = pos_y;
+  req.request.goal.pose.position.x = x;
+  req.request.goal.pose.position.y = y;
+  nav_msgs::GetPlan::Response plan;
+  client.call(req);
+
+  req.response = plan;
+
+ //execute plan
+ actionlib::SimpleActionClient<er_planning::PathAction> ac("path", true);
+
+ ac.waitForServer();
+
+ er_planning::PathGoal goal;
+ goal.Path = plan.plan;
+ ac.sendGoal(goal);
+
+
+
 }
 
 int pos2index(int xg, int yg){
@@ -259,6 +286,7 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
         PositionVector next_goal = grid_pos2coordinates(next_grid_pos.PosX, next_grid_pos.PosY);
       }
 
+    //publish the map
     nav_msgs::OccupancyGrid fog_map_msg;
     fog_map_msg.data = fog_map;
     fog_map_msg.info.resolution = resolution;

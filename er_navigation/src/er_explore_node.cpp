@@ -61,27 +61,25 @@ void goto_point(double x, double y){
  actionlib::SimpleActionClient<er_planning::PathAction> ac("path", true);
  ROS_INFO("waiting for server");
 
+ ROS_INFO_STREAM("path goal x", plan.plan.poses[1].pose.position.x);
+
  ac.waitForServer();
 ROS_INFO("done waiting");
 
- er_planning::PathGoal goal;
+ er_planning::PathActionGoal goal;
  goal.Path = plan.plan;
  ROS_INFO("sending goal..");
  ac.sendGoal(goal);
  ROS_INFO("sent goal");
 
- ROS_INFO("from x %f", goal.Path.poses[0].pose.position.x);
- ROS_INFO("to x %f", goal.Path.poses[1].pose.position.x);
+bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
 
-  bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
-
- if (finished_before_timeout)
+if (finished_before_timeout)
 {
   actionlib::SimpleClientGoalState state = ac.getState();
   ROS_INFO("Action finished: %s",state.toString().c_str());
 }
-else
-  ROS_INFO("Action did not finish before the time out.");
+else{ROS_INFO("Action did not finish before the time out.");}
 }
 
 int pos2index(int xg, int yg){

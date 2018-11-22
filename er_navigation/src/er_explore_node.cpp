@@ -63,9 +63,6 @@ void goto_point(double x, double y){
  er_planning::PathGoal goal;
  goal.Path = plan.plan;
  ac.sendGoal(goal);
-
-
-
 }
 
 int pos2index(int xg, int yg){
@@ -157,6 +154,10 @@ double ray_cast(double x, double y, double angle, double error_value) {
   }
   return std::sqrt( std::pow(x_discrete+0.5-x_start, 2) + std::pow(y_discrete+0.5-y_start, 2) ) * resolution;
 
+}
+
+int find_next_cell(){
+  
 }
 
 void grid_callback(const nav_msgs::OccupancyGrid::ConstPtr occupancy_grid){

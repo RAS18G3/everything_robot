@@ -147,7 +147,7 @@ void grid_callback(const nav_msgs::OccupancyGrid::ConstPtr occupancy_grid){
 }
 
 void get_grid_position(){
-  /*tf2_ros::Buffer tfBuffer;
+  tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
   //TRANSFORM
   geometry_msgs::TransformStamped transformStamped;
@@ -160,10 +160,10 @@ void get_grid_position(){
 
   // position coordinates
   pos_x = transformStamped.transform.translation.x;
-  pos_y = transformStamped.transform.translation.y;*/
+  pos_y = transformStamped.transform.translation.y;
 
-  pos_x = 2.0;
-  pos_y = 0.2;
+/*  pos_x = 2.0;
+  pos_y = 0.2;*/
 
   x_grid = (int)((pos_x-offsetX) / resolution);
   y_grid = (int)((pos_y-offsetY) / resolution);
@@ -233,13 +233,21 @@ bool explore_callback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Re
         for(int y = 0; y < height; y++){
           double dist = pow(x-x_grid,2)+pow(y-y_grid,2);
           int index = pos2index(x,y);
-          if(dist < smallest_dist && fog_map.at(index) < 10){
+          bool collision = false;
+          PositionVector point = grid_pos2coordinates(x,y);
+          double angle2point = atan2(point.PosY-pos_y, point.PosX-pos_x);
+          double ray = ray_cast(pos_x, pos_y, angle2point, 1000);
+          if(ray+resolution < sqrt(pow(pos_x-point.PosX,2)+pow(pos_y-point.PosY,2))){
+            collision = true;
+          }
+          if(dist < smallest_dist && fog_map.at(index) < 10 && collision == false){
             smallest_dist = dist;
             next_cell = index;
             found_cell = true;
           }
         }
       }
+      fog_map.at(next_cell) = 8;
 
       if(found_cell == false){
         ROS_INFO("exploration done");

@@ -150,30 +150,33 @@ void SLAMNode::map_update() {
     ray_cast_update(current_lidar_map_, x, y, laser_angle, laser_it->range, 2, 7);
   }
 
+  if(current_point_cloud_msg_ != nullptr) {
 
-  // point cloud transform
-  geometry_msgs::TransformStamped current_transform = transform_buffer_.lookupTransform("map", "base_link", pcl_conversions::fromPCL(current_point_cloud_msg_->header.stamp));
+    // point cloud transform
+    geometry_msgs::TransformStamped current_transform = transform_buffer_.lookupTransform("map", "base_link", pcl_conversions::fromPCL(current_point_cloud_msg_->header.stamp));
 
-  tf2::Quaternion orientation;
-  tf2::fromMsg(current_transform.transform.rotation, orientation);
-  tf2::Matrix3x3 rotation_matrix(orientation);
-  double roll, pitch, yaw;
-  rotation_matrix.getRPY(roll, pitch, yaw);
+    tf2::Quaternion orientation;
+    tf2::fromMsg(current_transform.transform.rotation, orientation);
+    tf2::Matrix3x3 rotation_matrix(orientation);
+    double roll, pitch, yaw;
+    rotation_matrix.getRPY(roll, pitch, yaw);
 
-  PointCloud transformed_pointcloud;
-  // clear point cloud view first
-  for(int angle = -30; angle < 30; ++angle) {
-    double total_angle = yaw + angle;
-    fix_angle(total_angle);
-    ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, angle, 0.6, 3, 0);
-  }
+    PointCloud transformed_pointcloud;
+    // clear point cloud view first
+    for(double angle = -30*2*M_PI/360; angle < 30*2*M_PI/360; angle+=0.03) {
+      double total_angle = yaw + angle;
+      fix_angle(total_angle);
+      ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, angle, 0.4, 3, 0);
+    }
 
-  pcl_ros::transformPointCloud ("/map", pcl_conversions::fromPCL(current_point_cloud_msg_->header.stamp), *current_point_cloud_msg_, "/base_link", transformed_pointcloud, tf_listener_);
-  for(auto it=transformed_pointcloud.begin(); it != transformed_pointcloud.end(); ++it) {
-    double angle = std::atan2(it->y - current_transform.transform.translation.y, it->x - current_transform.transform.translation.x);
-    double range = std::sqrt(std::pow(it->x - current_transform.transform.translation.x, 2) + std::pow(it->y - current_transform.transform.translation.y,2));
-    ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, angle, range, 3, 7);
-    // ROS_INFO_STREAM(angle << " " << range);
+    pcl_ros::transformPointCloud ("/map", pcl_conversions::fromPCL(current_point_cloud_msg_->header.stamp), *current_point_cloud_msg_, "/base_link", transformed_pointcloud, tf_listener_);
+    for(auto it=transformed_pointcloud.begin(); it != transformed_pointcloud.end(); ++it) {
+      double angle = std::atan2(it->y - current_transform.transform.translation.y, it->x - current_transform.transform.translation.x);
+      double range = std::sqrt(std::pow(it->x - current_transform.transform.translation.x, 2) + std::pow(it->y - current_transform.transform.translation.y,2));
+      ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, angle, range, 3, 7);
+      // ROS_INFO_STREAM(angle << " " << range);
+    }
+
   }
 
 }

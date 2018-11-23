@@ -86,6 +86,9 @@ private:
   ros::ServiceServer remove_object_service_;
   tf::TransformListener tf_listener_;
 
+  ros::Publisher pause_publisher_;
+  std_msgs::Bool pause_msg_;
+
   ros::Rate loop_rate_;
 
   std::vector<ClassifiedBoundingBoxCenter> classified_center_points_;

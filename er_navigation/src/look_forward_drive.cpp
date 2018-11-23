@@ -33,6 +33,15 @@ bool stop;
 bool forward;
 bool near_end;
 
+// for pausing
+ros::Subscriber pause_sub;
+bool pause;
+
+void pauseCallback(const std_msgs::Bool::ConstPtr& pause_msg)
+{
+  pause = pause_msg->data;
+}
+
 void fix_angle(double& angle) {
     angle = std::fmod(angle + M_PI, 2*M_PI);
     if (angle < 0)
@@ -183,8 +192,17 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
   tf2_ros::TransformListener tfListener(tfBuffer);
 
   while(ros::ok()){
+    if( pause )
+    {
+      twist_msg.linear.x = 0;
+      twist_msg.linear.y = 0;
+      twist_msg.angular.z = 0;
+      twist_pub.publish(twist_msg);
+      continue;
+    }
+
     //TRANSFORM
-  geometry_msgs::TransformStamped transformStamped;
+    geometry_msgs::TransformStamped transformStamped;
     try{
       transformStamped = tfBuffer.lookupTransform("map","base_link", ros::Time(0));
     }
@@ -306,6 +324,7 @@ int main(int argc, char **argv){
   ros::NodeHandle nh;
   //the action server, calls the execute function
   Server server(nh, "path", boost::bind(&execute, _1, &server), false);
+  pause_sub = nh.subscribe("/path/pause", 1, pauseCallback);
   server.start();
   ros::spin();
 }

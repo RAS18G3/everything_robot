@@ -23,6 +23,11 @@ void ObjectFilterNode::pointcloud_3d_cb(const PointCloud::ConstPtr& msg) {
 void ObjectFilterNode::boundingbox_cb(const er_perception::ClassifiedImage::ConstPtr& msg) {
   int count=0;
   ROS_DEBUG("received bounding boxes");
+
+  // pause if bounding boxes detected
+  pause_msg.data = true;
+  pause_publisher_.publish(pause_msg);
+
   classified_center_points_.clear();
   int x, y, width, height, class_id;
   for(auto it = msg->bounding_boxes.begin(); it != msg->bounding_boxes.end(); ++it) {
@@ -56,6 +61,8 @@ void ObjectFilterNode::init_node() {
   marker_publisher_ = nh_.advertise<visualization_msgs::Marker>( "/object_markers", 0 );
   evidence_publisher_ = nh_.advertise<ras_msgs::RAS_Evidence>("/evidence", 100);
   speak_publisher_ = nh_.advertise<std_msgs::String>("/espeak/string", 1);
+
+  pause_publisher_ = nh_.advertise<std_msgs::Bool>("/path/pause", 1);
 
   reset_objects_service_ = nh_.advertiseService(node_name + "/reset_objects", &ObjectFilterNode::reset_objects_cb, this);
   remove_object_service_ = nh_.advertiseService(node_name + "/remove_object", &ObjectFilterNode::remove_object_cb, this);
@@ -113,6 +120,7 @@ void ObjectFilterNode::process_data() {
           // ROS_INFO_STREAM("Distance " << std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) << " " << x_avg << " " << y_avg << " " << object_it->position.x << " " << object_it->position.y);
           if((std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) < same_object_distance_ && object_it->class_id == class_id) ||
               std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) < object_distance_) {
+
             new_object = false;
             object_it->position.x = 0.95 * object_it->position.x + 0.05 * x_avg;
             object_it->position.y = 0.95 * object_it->position.y + 0.05 * y_avg;
@@ -122,6 +130,9 @@ void ObjectFilterNode::process_data() {
             object_it->class_id = most_likely_class;
             ROS_DEBUG_STREAM("Old object: " << object_it->position.x << " " << object_it->position.y << " " << most_likely_class);
             ROS_DEBUG_STREAM("Seeing old object id " << object_it - objects_.begin());
+
+            pause_msg.data = false;
+            pause_publisher_.publish(pause_msg);
 
             if(object_it->observations >= 10 and object_it->evidence_published == false) {
               object_it->evidence_published = true;

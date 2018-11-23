@@ -1,5 +1,9 @@
 #include "map_reader.h"
 
+MapReader::MapReader() {
+
+}
+
 MapReader::MapReader(std::string path_to_map) {
   ROS_INFO_STREAM("Trying to read map at " << path_to_map);
 

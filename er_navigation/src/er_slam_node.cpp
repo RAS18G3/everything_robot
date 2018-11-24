@@ -57,6 +57,8 @@ void SLAMNode::init_node() {
   ros::param::param<double>("~laser_sigma", laser_sigma_, 0.05);
   ros::param::param<double>("~tracking_threshold", tracking_threshold_, 0.05);
   ros::param::param<int>("~tracking_particles", tracking_particles_, 1000);
+  ros::param::param<int>("~camera_fov", camera_fov_, 60);
+  ros::param::param<int>("~camera_range", camera_range_, 0.3);
 
   map_reader_ = MapReader(map_path);
 
@@ -147,7 +149,7 @@ void SLAMNode::map_update() {
     double laser_angle = yaw_est_ + laser_it->angle;
     fix_angle(laser_angle);
 
-    ray_cast_update(current_lidar_map_, x, y, laser_angle, laser_it->range, 2, 7);
+    ray_cast_update(current_lidar_map_, x, y, laser_angle, laser_it->range, 3, 7);
   }
 
   if(current_point_cloud_msg_ != nullptr) {
@@ -163,17 +165,17 @@ void SLAMNode::map_update() {
 
     PointCloud transformed_pointcloud;
     // clear point cloud view first
-    for(double angle = -30*2*M_PI/360; angle < 30*2*M_PI/360; angle+=0.03) {
+    for(double angle = -camera_fov_/2.0*2.0*M_PI/360.0; angle < camera_fov_/2.0*2.0*M_PI/360.0; angle+=0.03) {
       double total_angle = yaw + angle;
       fix_angle(total_angle);
-      ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, angle, 0.4, 3, 0);
+      ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, total_angle, camera_range_, 2, 0);
     }
 
     pcl_ros::transformPointCloud ("/map", pcl_conversions::fromPCL(current_point_cloud_msg_->header.stamp), *current_point_cloud_msg_, "/base_link", transformed_pointcloud, tf_listener_);
     for(auto it=transformed_pointcloud.begin(); it != transformed_pointcloud.end(); ++it) {
       double angle = std::atan2(it->y - current_transform.transform.translation.y, it->x - current_transform.transform.translation.x);
       double range = std::sqrt(std::pow(it->x - current_transform.transform.translation.x, 2) + std::pow(it->y - current_transform.transform.translation.y,2));
-      ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, angle, range, 3, 7);
+      ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, total_angle, range, 1, 7);
       // ROS_INFO_STREAM(angle << " " << range);
     }
 

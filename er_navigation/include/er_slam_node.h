@@ -101,6 +101,8 @@ private:
   double tracking_threshold_;
   double x_est_, y_est_, yaw_est_;
   int tracking_particles_;
+  double camera_fov_;
+  double camera_range_;
 
 };
 

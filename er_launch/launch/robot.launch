@@ -52,11 +52,13 @@
     <param name="alpha_rot_trans" value="0.05" />
     <param name="alpha_trans_rot" value="0.00005" />
     <param name="alpha_trans_trans" value="0.00005" />
-    <param name="gaussian_pos" value="0.00" />
-    <param name="gaussian_rot" value="0.00" />
+    <param name="gaussian_pos" value="0.005" />
+    <param name="gaussian_rot" value="0.005" />
     <param name="tracking_particles" value="300" />
     <param name="tracking_threshold" value="0.05" />
     <param name="beam_count" value="14" />
+    <param name="camera_fov" value="60" />
+    <param name="camera_range" value="0.35" />
   </node>
 
   <include file="$(find realsense_camera)/launch/sr300_nodelet_rgbd.launch" />

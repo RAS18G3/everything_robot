@@ -57,8 +57,8 @@ void SLAMNode::init_node() {
   ros::param::param<double>("~laser_sigma", laser_sigma_, 0.05);
   ros::param::param<double>("~tracking_threshold", tracking_threshold_, 0.05);
   ros::param::param<int>("~tracking_particles", tracking_particles_, 1000);
-  ros::param::param<int>("~camera_fov", camera_fov_, 60);
-  ros::param::param<int>("~camera_range", camera_range_, 0.3);
+  ros::param::param<double>("~camera_fov", camera_fov_, 60);
+  ros::param::param<double>("~camera_range", camera_range_, 0.3);
 
   map_reader_ = MapReader(map_path);
 
@@ -175,7 +175,7 @@ void SLAMNode::map_update() {
     for(auto it=transformed_pointcloud.begin(); it != transformed_pointcloud.end(); ++it) {
       double angle = std::atan2(it->y - current_transform.transform.translation.y, it->x - current_transform.transform.translation.x);
       double range = std::sqrt(std::pow(it->x - current_transform.transform.translation.x, 2) + std::pow(it->y - current_transform.transform.translation.y,2));
-      ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, total_angle, range, 1, 7);
+      ray_cast_update(current_obstacle_map_, current_transform.transform.translation.x, current_transform.transform.translation.y, angle, range, 1, 7);
       // ROS_INFO_STREAM(angle << " " << range);
     }
 

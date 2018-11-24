@@ -1,6 +1,23 @@
 #include "er_object_filter_node.h"
 #include "std_msgs/String.h"
 
+bool similar_objects(int class_1, int class_2) {
+    // will return true for same colored class ids, and false different colored classes
+    if( ( class_1 == 0 || class_1 == 1 ) && ( class_2 == 0 || class_2 == 1 ) )
+        return true;
+    if( ( class_1 == 2 || class_1 == 3 || class_1 == 4 ) && ( class_2 == 2 || class_2 == 3 || class_2 == 4 ) )
+        return true;
+    if( ( class_1 == 5 || class_1 == 6 ) && ( class_2 == 5 || class_2 == 6 ) )
+        return true;
+    if( ( class_1 == 7 || class_1 == 8 || class_1 == 9 ) && ( class_2 == 7 || class_2 == 8 || class_2 == 9 ) )
+        return true;
+    if( ( class_1 == 10 || class_1 == 11 ) && ( class_2 == 10 || class_2 == 11 ) )
+        return true;
+    if( ( class_1 == 12 || class_1 == 13 ) && ( class_2 == 12 || class_2 == 13 ) )
+        return true;
+    return false;
+}
+
 ObjectFilterNode::ObjectFilterNode() : nh_(),  last_3d_pointcloud_msg_(nullptr), loop_rate_(10), id_counter(0) {
 
 }
@@ -112,7 +129,7 @@ void ObjectFilterNode::process_data() {
         bool new_object = true;
         for(auto object_it = objects_.begin(); object_it != objects_.end(); ++object_it) {
           // ROS_INFO_STREAM("Distance " << std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) << " " << x_avg << " " << y_avg << " " << object_it->position.x << " " << object_it->position.y);
-          if((std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) < same_object_distance_ && object_it->class_id == class_id) ||
+          if((std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) < same_object_distance_ && similar_objects(object_it->class_id, class_id)) ||
               std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) < object_distance_) {
             new_object = false;
             object_it->position.x = 0.95 * object_it->position.x + 0.05 * x_avg;

@@ -65,10 +65,34 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
     }
   }
 
+  // remove dilution around end point (if object is close to a wall, path execution will stop anyways if not possible)
+  if(occupancy_grid.data[(int)xGoal + ((int)yGoal)*width] > COLL_THRESH) {
+    ROS_INFO("Start in diluted area, remove dilution around it");
+    const int small_remove_radius = 0.045 / resolution;
+    // remove mapped stuff as well (since objects are obstacles themselves, thus they will always lie on occupied fields)
+    for(int x=xStart - small_remove_radius; x < xStart + small_remove_radius; ++x) {
+      for(int y=yStart - small_remove_radius; y < yStart + small_remove_radius; ++y) {
+        if(undiluted_grid.data[x + y*width ] <= 99) { // do not remove actual walls
+          map[x + y*width] = 0;
+        }
+        map[x + y*width] = 0;
+      }
+    }
+    // remove dilution with larger radius
+    const int remove_radius = dilute_threshold / resolution;
+    for(int x=xStart - remove_radius; x < xStart + remove_radius; ++x) {
+      for(int y=yStart - remove_radius; y < yStart + remove_radius; ++y) {
+        if(undiluted_grid.data[x + y*width ] <= 50) {
+          map[x + y*width] = 0;
+        }
+      }
+    }
+  }
+
   pathfinderMap_pub.publish(occupancy_grid);
 
-  if(undiluted_grid.data[(int)xGoal + ((int)yGoal)*width] > COLL_THRESH){ invalidPath = true; }
-  if(undiluted_grid.data[(int)xStart + ((int)yStart)*width] > COLL_THRESH){ invalidPath = true; }
+  if(undiluted_grid.data[(int)xGoal + ((int)yGoal)*width] >= 100){ invalidPath = true; }
+  if(undiluted_grid.data[(int)xStart + ((int)yStart)*width] >= 100){ invalidPath = true; }
   if( invalidPath )
   {
     if( DEBUG==1 ){ ROS_INFO("Invalid Start or Goal."); }

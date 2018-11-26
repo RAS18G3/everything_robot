@@ -6,6 +6,8 @@
 
   <node pkg="tf2_ros" type="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 1 map odom" />
 
+  <node pkg="ras_espeak" type="espeak_node" name="espeak" output="screen"  />
+
   <node name="left_motor" pkg="phidgets" type="motor" output="screen" >
     <param name="name" value="left_motor" />
     <param name="_name" value="left_motor" />

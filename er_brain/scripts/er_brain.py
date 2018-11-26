@@ -5,6 +5,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist, PoseStamped
 from pynput import keyboard
 import actionlib
+from actoinclient import CommState
 import tf2_ros
 from er_planning.msg import PathAction, PathActionGoal
 from nav_msgs.srv import GetPlan
@@ -25,6 +26,7 @@ class BrainNode:
         self.path_client = actionlib.SimpleActionClient('path', PathAction)
 
         self.object_subscriber = rospy.Subscriber("/objects", ObjectList, self.objects_cb)
+        self.twist_publisher = rospy.Publisher("/cartesian_motor_controller/twist", Twist, queue_size=1)
 
     def objects_cb(self, object_list):
         self.objects = object_list.objects
@@ -101,14 +103,18 @@ class BrainNode:
         success = start_grip()
         return success
 
-
     def end_grip(self):
         end_grip = rospy.ServiceProxy('/end_grip', Trigger)
         success = end_grip()
         return success
 
-    def goto(self, x, y):
-        # find current robot position
+    def back_up(self):
+        twist_msg = Twist()
+        twist_msg.linear.x = -0.1;
+        self.twist_publisher.publish(twist_msg);
+        rospy.Duration(3).sleep();
+
+    def get_current_pos(self):
         try:
             trans = self.tfBuffer.lookup_transform('map', 'base_link', rospy.Time())
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
@@ -117,8 +123,16 @@ class BrainNode:
 
         current_x = trans.transform.translation.x
         current_y = trans.transform.translation.y
+        return current_x, current_y
 
+    def goto(self, x, y, remaining_replans=5):
+        # find current robot position
+        if remaining_replans == 0:
+            print("Had to replan to often, cancel...")
+            return False
         print('Trying to find path from {0},{1} to {2},{3}'.format(current_x, current_y, x, y))
+
+        current_x, current_y = self.get_current_pos()
 
         rospy.wait_for_service('/pathfinder/find_path')
         try:
@@ -152,8 +166,15 @@ class BrainNode:
             self.path_client.wait_for_result()
             print('Execution has finished.')
             # Prints out the result of executing the action
-            print(self.path_client.get_result())
-            return True
+            if self.path_client.get_state() == CommState.PREEMPTING:
+                current_x, current_y = self.get_current_pos()
+                if ((current_x - x)**2 + (current_y-y)**2)**0.5 <= 0.25:
+                    return True
+                else:
+                    self.back_up()
+                    return self.goto(x,y,remaining_replans-1)
+            if self.path_client.get_state() == CommState.SUCCEEDED:
+                return True
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e
             return False

@@ -55,7 +55,7 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
   if(occupancy_grid.data[(int)xStart + ((int)yStart)*width] > COLL_THRESH) {
     // remove dilution around start point (if robot drives into some area it should be able to get out of it)
     ROS_INFO("Start in diluted area, remove dilution around it");
-    const int remove_radius = dilute_threshold / resolution;
+    const int remove_radius = dilute_threshold*1.4 / resolution;
     for(int x=xStart - remove_radius; x < xStart + remove_radius; ++x) {
       for(int y=yStart - remove_radius; y < yStart + remove_radius; ++y) {
         if(undiluted_grid.data[x + y*width ] <= 50) {
@@ -78,7 +78,7 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
       }
     }
     // remove dilution with larger radius
-    const int remove_radius = dilute_threshold / resolution;
+    const int remove_radius = dilute_threshold*1.4 / resolution;
     for(int x=xGoal - remove_radius; x < xGoal + remove_radius; ++x) {
       for(int y=yGoal - remove_radius; y < yGoal + remove_radius; ++y) {
         if(undiluted_grid.data[x + y*width ] <= 50) {

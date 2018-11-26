@@ -83,7 +83,7 @@ class simple_object_detector_node:
             classified_image_msg.bounding_boxes.append(classified_bounding_box)
 
         classified_image_msg.image = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
-
+        classified_image_msg.image.header = data.header
         if DEBUG:
             cv2.imshow('image', img)
             cv2.waitKey(1)

@@ -45,6 +45,12 @@ private:
     int class_id;
     ClassifiedBoundingBoxCenter(int xp, int yp, int cid) : position(xp, yp), class_id(cid) {};
   };
+
+  struct ObjectCandidate {
+    Position2D position;
+    int class_id;
+    ObjectCandidate(double xp, double yp, int cid) : position(xp, yp), class_id(cid) {};
+  };
   struct Object {
     Position2D position;
     std::vector<int> class_count;
@@ -64,6 +70,7 @@ private:
   bool reset_objects_cb(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response );
   bool remove_object_cb(er_perception::RemoveObject::Request& request, er_perception::RemoveObject::Response& response );
   void publish_objects();
+  void handle_object(double x, double y, int class_id);
 
   PointCloud::ConstPtr last_3d_pointcloud_msg_;
   er_perception::ClassifiedImage::ConstPtr last_classified_image_msg_;
@@ -89,6 +96,7 @@ private:
   ros::Rate loop_rate_;
 
   std::vector<ClassifiedBoundingBoxCenter> classified_center_points_;
+  std::vector<ObjectCandidate> positioned_center_points_;
   std::vector<Object> objects_;
 
   int id_counter;

@@ -49,7 +49,7 @@ bool grab_cb(std_srvs::Trigger::Request  &req,
       twist_pub.publish(twist_msg);
 
       std_msgs::Int64 angle_msg;
-      angle_msg.data = 110;
+      angle_msg.data = 120;
       grab_pub.publish(angle_msg);
       ros::Duration(1).sleep();
       res.success = true;

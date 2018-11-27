@@ -129,14 +129,11 @@ void SLAMNode::map_update() {
 
   for(int i = 0; i < current_laser_scan_msg_->ranges.size(); ++i) {
     double range = current_laser_scan_msg_->ranges[i];
-    if(!std::isinf(range) && range <= current_laser_scan_msg_->range_max && range >= current_laser_scan_msg_->range_min && range >= 0.4) {
-      ++count;
-      if (count == skip+1) {
-        double angle =  current_laser_scan_msg_->angle_min + i * current_laser_scan_msg_->angle_increment + lidar_angle;
-        fix_angle(angle);
-        laser_scans.emplace_back(range, angle);
-        count = 0;
-      }
+    if(!std::isinf(range) && range <= current_laser_scan_msg_->range_max && range >= current_laser_scan_msg_->range_min) {
+      double angle =  current_laser_scan_msg_->angle_min + i * current_laser_scan_msg_->angle_increment + lidar_angle;
+      fix_angle(angle);
+      laser_scans.emplace_back(range, angle);
+      count = 0;
     }
   }
 
@@ -144,12 +141,11 @@ void SLAMNode::map_update() {
     // offset the particle based on the lidar position
     double x = x_est_ + lidar_x * cos(yaw_est_) + lidar_y * sin(yaw_est_);
     double y = y_est_ + lidar_x * sin(yaw_est_) + lidar_y * cos(yaw_est_);
-
-    // calculate laser angle in global reference frame
     double laser_angle = yaw_est_ + laser_it->angle;
     fix_angle(laser_angle);
 
-    ray_cast_update(current_lidar_map_, x, y, laser_angle, laser_it->range, 3, 7);
+    ray_cast_update(current_lidar_map_, x, y, laser_angle, laser_it->range, 4, 7);
+
   }
 
   if(current_point_cloud_msg_ != nullptr) {

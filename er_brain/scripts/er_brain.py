@@ -5,7 +5,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist, PoseStamped
 from pynput import keyboard
 import actionlib
-from actoinclient import CommState
+from actionlib import CommState
 import tf2_ros
 from er_planning.msg import PathAction, PathActionGoal
 from nav_msgs.srv import GetPlan
@@ -37,23 +37,26 @@ class BrainNode:
             command = raw_input('# ')
             snippets = command.split(' ')
             if snippets[0] == 'goto':
+                self.goto(float(snippets[1]), float(snippets[2]))
                 try:
-                    self.goto(float(snippets[1]), float(snippets[2]))
-                except:
+                    pass
+                except ValueError:
                     print('Wrong arguments...')
-            if snippets[0] == 'explore':
+                    print(snippets[1])
+                    print(snippets[2])
+            elif snippets[0] == 'explore':
                 self.explore()
-            if snippets[0] == 'grab':
+            elif snippets[0] == 'grab':
                 try:
                     self.grab(int(snippets[1]))
-                except:
+                except ValueError:
                     print('Wrong arguments...')
                     print('Available objects are: ')
                     print(self.objects)
-            if snippets[0] == 'retrieve':
+            elif snippets[0] == 'retrieve':
                 try:
                     self.retrieve(int(snippets[1]))
-                except:
+                except ValueError:
                     print('Wrong arguments...')
                     print('Available objects are: ')
                     print(self.objects)
@@ -109,10 +112,15 @@ class BrainNode:
         return success
 
     def back_up(self):
+        print('Trying to back up...')
         twist_msg = Twist()
         twist_msg.linear.x = -0.1;
         self.twist_publisher.publish(twist_msg);
-        rospy.Duration(3).sleep();
+        rospy.sleep(2.0);
+        twist_msg = Twist()
+        twist_msg.linear.x = 0;
+        self.twist_publisher.publish(twist_msg);
+        rospy.sleep(1.0);
 
     def get_current_pos(self):
         try:
@@ -130,10 +138,10 @@ class BrainNode:
         if remaining_replans == 0:
             print("Had to replan to often, cancel...")
             return False
-        print('Trying to find path from {0},{1} to {2},{3}'.format(current_x, current_y, x, y))
 
         current_x, current_y = self.get_current_pos()
 
+        print('Trying to find path from {0},{1} to {2},{3}'.format(current_x, current_y, x, y))
         rospy.wait_for_service('/pathfinder/find_path')
         try:
             get_plan = rospy.ServiceProxy('/pathfinder/find_path', GetPlan)
@@ -164,16 +172,19 @@ class BrainNode:
             # Waits for the server to finish performing the action.
             print('Waiting for execution to finish...')
             self.path_client.wait_for_result()
-            print('Execution has finished.')
+            print('Execution action client has finished.')
             # Prints out the result of executing the action
-            if self.path_client.get_state() == CommState.PREEMPTING:
+            print(self.path_client.get_state())
+            if self.path_client.get_state() == 2:
+                print('Obstacle found during execution...')
                 current_x, current_y = self.get_current_pos()
                 if ((current_x - x)**2 + (current_y-y)**2)**0.5 <= 0.25:
                     return True
                 else:
                     self.back_up()
                     return self.goto(x,y,remaining_replans-1)
-            if self.path_client.get_state() == CommState.SUCCEEDED:
+            if self.path_client.get_state() == 3:
+                print('Path succesfully executed')
                 return True
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e

@@ -55,7 +55,7 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
   if(occupancy_grid.data[(int)xStart + ((int)yStart)*width] > COLL_THRESH) {
     // remove dilution around start point (if robot drives into some area it should be able to get out of it)
     ROS_INFO("Start in diluted area, remove dilution around it");
-    const int remove_radius = dilute_threshold / resolution;
+    const int remove_radius = dilute_threshold*1.4 / resolution;
     for(int x=xStart - remove_radius; x < xStart + remove_radius; ++x) {
       for(int y=yStart - remove_radius; y < yStart + remove_radius; ++y) {
         if(undiluted_grid.data[x + y*width ] <= 50) {
@@ -67,21 +67,20 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
 
   // remove dilution around end point (if object is close to a wall, path execution will stop anyways if not possible)
   if(occupancy_grid.data[(int)xGoal + ((int)yGoal)*width] > COLL_THRESH) {
-    ROS_INFO("Start in diluted area, remove dilution around it");
+    ROS_INFO("Goal in diluted area, remove dilution around it");
     const int small_remove_radius = 0.045 / resolution;
     // remove mapped stuff as well (since objects are obstacles themselves, thus they will always lie on occupied fields)
-    for(int x=xStart - small_remove_radius; x < xStart + small_remove_radius; ++x) {
-      for(int y=yStart - small_remove_radius; y < yStart + small_remove_radius; ++y) {
+    for(int x=xGoal - small_remove_radius; x < xGoal + small_remove_radius; ++x) {
+      for(int y=yGoal - small_remove_radius; y < yGoal + small_remove_radius; ++y) {
         if(undiluted_grid.data[x + y*width ] <= 99) { // do not remove actual walls
           map[x + y*width] = 0;
         }
-        map[x + y*width] = 0;
       }
     }
     // remove dilution with larger radius
-    const int remove_radius = dilute_threshold / resolution;
-    for(int x=xStart - remove_radius; x < xStart + remove_radius; ++x) {
-      for(int y=yStart - remove_radius; y < yStart + remove_radius; ++y) {
+    const int remove_radius = dilute_threshold*1.4 / resolution;
+    for(int x=xGoal - remove_radius; x < xGoal + remove_radius; ++x) {
+      for(int y=yGoal - remove_radius; y < yGoal + remove_radius; ++y) {
         if(undiluted_grid.data[x + y*width ] <= 50) {
           map[x + y*width] = 0;
         }

@@ -190,7 +190,7 @@ nav_msgs::OccupancyGrid diluteMap(nav_msgs::OccupancyGrid occupancy_grid, double
       if(map_ind > -1 && map_ind < ind_max )
       // out-of-bounds check
       {
-        mapNew[map_ind] = mapOrig[ind];
+        mapNew[map_ind] = 90;
       }
     }
   }

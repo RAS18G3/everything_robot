@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import roslib
-roslib.load_manifest('cv')
 #import sys
 import rospy
 import cv2

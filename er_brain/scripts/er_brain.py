@@ -81,7 +81,7 @@ class BrainNode:
         start_time = time.time()
         elapsed_time = time.time()-start_time
         while elapsed_time < 60:
-            x = random.uniform(0.2, 2.0) //Fix this so it is independent of map size
+            x = random.uniform(0.2, 2.0)
             y = random.uniform(0.2, 2.0)
             print("x:"+str(x)+" y:"+str(y))
             self.goto(x, y)
@@ -116,7 +116,7 @@ class BrainNode:
         twist_msg = Twist()
         twist_msg.linear.x = -0.1;
         self.twist_publisher.publish(twist_msg);
-        rospy.sleep(2.0);
+        rospy.sleep(1.0);
         twist_msg = Twist()
         twist_msg.linear.x = 0;
         self.twist_publisher.publish(twist_msg);

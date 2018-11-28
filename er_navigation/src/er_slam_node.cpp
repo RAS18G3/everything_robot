@@ -27,7 +27,7 @@ double evaluate_gaussian(double x, double sigma, double mu=0) {
   return std::exp( - std::pow(x - mu, 2) / (2 * sigma * sigma) ) / (sigma * std::sqrt(2*M_PI));
 }
 
-SLAMNode::SLAMNode() : nh_(), loop_rate_(10), current_state_(None), transform_listener_(transform_buffer_) {
+SLAMNode::SLAMNode() : nh_(), loop_rate_(25), current_state_(None), transform_listener_(transform_buffer_) {
 
 }
 
@@ -73,6 +73,11 @@ void SLAMNode::init_node() {
 
   // advertise the service which will reset the localization
   reset_localization_service_ = nh_.advertiseService(node_name + "/reset_localization", &SLAMNode::reset_localization_cb, this);
+
+  // reset map
+  current_map_ = map_reader_.occupancy_grid(map_margin_);
+  current_obstacle_map_ = current_map_;
+  current_lidar_map_ = current_map_;
 
   reset_localization(); // this will init the particle filter
 }

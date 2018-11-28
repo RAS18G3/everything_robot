@@ -17,7 +17,7 @@ public:
   MapReader();
   ~MapReader();
 
-  nav_msgs::OccupancyGrid occupancy_grid(double margin) const;
+  nav_msgs::OccupancyGrid occupancy_grid(double margin);
 
 private:
   struct Wall {

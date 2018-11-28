@@ -44,7 +44,7 @@ void ObjectFilterNode::boundingbox_cb(const er_perception::ClassifiedImage::Cons
   positioned_center_points_.clear();
   int x, y, width, height, class_id;
 
-  ROS_INFO_STREAM("delay " << (ros::Time::now() - msg->image.header.stamp).toSec());
+  // ROS_INFO_STREAM("delay " << (ros::Time::now() - msg->image.header.stamp).toSec());
   for(auto it = msg->bounding_boxes.begin(); it != msg->bounding_boxes.end(); ++it) {
     x = it->x;
     y = it->y;
@@ -175,7 +175,7 @@ void ObjectFilterNode::process_data() {
 void ObjectFilterNode::handle_object(double x, double y, int class_id) {
   // check if there is a similar object in the map already
   bool new_object = true;
-  ROS_INFO_STREAM(x << " " << y << " " << class_id);
+  // ROS_INFO_STREAM(x << " " << y << " " << class_id);
   for(auto object_it = objects_.begin(); object_it != objects_.end(); ++object_it) {
     // ROS_INFO_STREAM("Distance " << std::sqrt(std::pow(object_it->position.x - x_avg, 2) + std::pow(object_it->position.y - y_avg, 2)) << " " << x_avg << " " << y_avg << " " << object_it->position.x << " " << object_it->position.y);
     if((std::sqrt(std::pow(object_it->position.x - x, 2) + std::pow(object_it->position.y - y, 2)) < same_object_distance_ && similar_objects(object_it->class_id, class_id)) ||
@@ -187,8 +187,8 @@ void ObjectFilterNode::handle_object(double x, double y, int class_id) {
       ++object_it->observations;
       int most_likely_class = std::max_element(object_it->class_count.begin(), object_it->class_count.end()) - object_it->class_count.begin();
       object_it->class_id = most_likely_class;
-      ROS_DEBUG_STREAM("Old object: " << object_it->position.x << " " << object_it->position.y << " " << most_likely_class);
-      ROS_DEBUG_STREAM("Seeing old object id " << object_it - objects_.begin());
+      ROS_INFO_STREAM("Old object: " << object_it->position.x << " " << object_it->position.y << " " << most_likely_class);
+      ROS_INFO_STREAM("Seeing old object id " << object_it - objects_.begin());
 
       if(object_it->observations >= 10 and object_it->evidence_published == false) {
         object_it->evidence_published = true;

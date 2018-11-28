@@ -43,23 +43,53 @@ MapReader::~MapReader() {
 
 }
 
-nav_msgs::OccupancyGrid MapReader::occupancy_grid(double margin) const {
+nav_msgs::OccupancyGrid MapReader::occupancy_grid(double margin) {
   nav_msgs::OccupancyGrid occupancy_grid_msg = nav_msgs::OccupancyGrid();
 
   double max_x = 0;
   double max_y = 0;
+  double min_x = 0;
+  double min_y = 0;
   for(auto it = walls.begin(); it != walls.end(); ++it) {
     if(it->x_start > max_x) {
       max_x = it->x_start;
     }
+    if(it->x_start < min_x) {
+      min_x = it->x_start;
+    }
     if(it->x_end > max_x) {
       max_x = it->x_end;
+    }
+    if(it->x_end < min_x) {
+      min_x = it->x_end;
     }
     if(it->y_start > max_y) {
       max_y = it->y_start;
     }
+    if(it->y_start < min_y) {
+      min_y = it->y_start;
+    }
     if(it->y_end > max_y) {
         max_y = it->y_end;
+    }
+    if(it->y_end < min_y) {
+        min_y = it->y_end;
+    }
+  }
+
+  if (min_y < 0) {
+    for(auto it = walls.begin(); it != walls.end(); ++it) {
+      it->y_start -= min_y;
+      it->y_end -= min_y;
+      max_y -= min_y;
+    }
+  }
+
+  if (min_x < 0) {
+    for(auto it = walls.begin(); it != walls.end(); ++it) {
+      it->x_start -= min_x;
+      it->x_end -= min_x;
+      max_x -= min_x;
     }
   }
 

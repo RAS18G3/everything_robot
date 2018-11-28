@@ -2,7 +2,7 @@ import cv2
 import rospy
 
 ##### Global variables ##################
-SATURATION_THRESHOLD = 200 # decrease if red/orange/green/blue/yellow are not recognized
+SATURATION_THRESHOLD = 190 # decrease if red/orange/green/blue/yellow are not recognized
 VIOLET_HUE_LOW = 110 # increase the violet range if violet is not recognized
 VIOLET_HUE_HIGH = 150
 VIOLET_SATURATION = 35 # decrease if violet is not recognized

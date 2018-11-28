@@ -64,7 +64,7 @@ double ray_cast_update_mult(nav_msgs::OccupancyGrid &occupancy_grid, double x, d
 
   // iterate over the line until there is an obstacle (note there should always be one, since we are inside the maze)
   try {
-    while(std::sqrt(std::pow(x_discrete - x,2) + std::pow(y_discrete - y,2)) * occupancy_grid.info.resolution < range - occupancy_grid.info.resolution) {
+    while(std::sqrt(std::pow(x_discrete - x,2) + std::pow(y_discrete - y,2)) * occupancy_grid.info.resolution < range + occupancy_grid.info.resolution) {
       if(at(occupancy_grid, x_discrete, y_discrete) < 100 )
         at(occupancy_grid, x_discrete, y_discrete) *= decrease;
       if(at(occupancy_grid, x_discrete, y_discrete) < 5)

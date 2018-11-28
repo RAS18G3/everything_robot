@@ -151,10 +151,12 @@ if mode == "TRAIN":
     np.random.shuffle(shuffled_indices)
     data = data[shuffled_indices]
     labels = labels[shuffled_indices]
-    training_data = data[:250]
-    val_data = data[250:]
-    training_labels = labels[:250]
-    val_labels = labels[250:]
+    validation_percentage = 0.9
+    split = int(validation_percentage * data.shape[0])
+    training_data = data[:split]
+    val_data = data[split:]
+    training_labels = labels[:split]
+    val_labels = labels[split:]
     print(data.shape)
     print(labels.shape)
 

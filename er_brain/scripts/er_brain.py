@@ -116,7 +116,7 @@ class BrainNode:
         twist_msg = Twist()
         twist_msg.linear.x = -0.1;
         self.twist_publisher.publish(twist_msg);
-        rospy.sleep(2.0);
+        rospy.sleep(1.0);
         twist_msg = Twist()
         twist_msg.linear.x = 0;
         self.twist_publisher.publish(twist_msg);

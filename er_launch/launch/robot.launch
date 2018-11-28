@@ -41,11 +41,11 @@
   <include file="$(find rplidar_ros)/launch/rplidar.launch" />
 
   <node name="maze_map_node" pkg="ras_maze_map" type="ras_maze_map_node" output="screen">
-    <param name="map_file" value="$(find ras_maze_map)/maps/lab_maze_2018.txt" />
+    <param name="map_file" value="$(find ras_maze_map)/maps/lab_maze_2018_2.txt" />
   </node>
 
   <node name="slam" pkg="er_navigation" type="er_slam_node" output="screen">
-    <param name="map_file" value="$(find ras_maze_map)/maps/lab_maze_2018.txt" />
+    <param name="map_file" value="$(find ras_maze_map)/maps/lab_maze_2018_2.txt" />
     <param name="particles_per_m2" value="2000" />
     <param name="odometry_topic" value="/wheel_odometry" />
     <param name="laser_scan_topic" value="/scan" />

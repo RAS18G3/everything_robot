@@ -81,7 +81,7 @@ class BrainNode:
         start_time = time.time()
         elapsed_time = time.time()-start_time
         while elapsed_time < 60:
-            x = random.uniform(0.2, 2.0) //Fix this so it is independent of map size
+            x = random.uniform(0.2, 2.0)
             y = random.uniform(0.2, 2.0)
             print("x:"+str(x)+" y:"+str(y))
             self.goto(x, y)

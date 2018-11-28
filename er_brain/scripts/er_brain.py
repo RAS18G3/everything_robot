@@ -80,6 +80,8 @@ class BrainNode:
     def explore(self):
         start_time = time.time()
         elapsed_time = time.time()-start_time
+        print("reset map")
+        reset_map = rospy.ServiceProxy('/slam/reset_localization', Trigger);
         while elapsed_time < 60:
             x = random.uniform(0.2, 2.0)
             y = random.uniform(0.2, 2.0)

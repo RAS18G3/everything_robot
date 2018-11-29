@@ -139,6 +139,7 @@ void ObjectFilterNode::init_node() {
   ros::param::param<std::string>("~pointcloud_2d_topic", pointcloud_2d_topic, "/camera/pointcloud_2d");
   ros::param::param<std::string>("~classified_object_bounding_boxes_topic", boundingbox_topic, "/object_bounding_boxes_classified");
   ros::param::param<int>("~required_observations", required_observations_, 10);
+  ros::param::param<bool>("~merge_objects_", merge_objects_, true);
 
   // pointcloud_2d_subscriber_ = nh_.subscribe<PointCloud>(pointcloud_2d_topic, 1, &ObjectFilterNode::pointcloud_2d_cb, this);
   // pointcloud_3d_subscriber_ = nh_.subscribe<PointCloud>(pointcloud_3d_topic, 1, &ObjectFilterNode::pointcloud_3d_cb, this);
@@ -223,7 +224,7 @@ void ObjectFilterNode::handle_object(double x, double y, int class_id) {
       ++object_it->class_count[class_id];
       ++object_it->observations;
       int most_likely_class = std::max_element(object_it->class_count.begin(), object_it->class_count.end()) - object_it->class_count.begin();
-      if(most_likely_class != object_it->class_id) {
+      if(most_likely_class != object_it->class_id && merge_objects_) {
         // class has changed, try to merge this object with similar objects
         mergeObjects(object_it->position.x, object_it->position.y, most_likely_class, object_it->id);
         return; // cant do all the remaining stuff because, the iterator will be invalidated inside mergeObjects

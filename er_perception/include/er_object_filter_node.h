@@ -106,6 +106,7 @@ private:
   double object_distance_;
   double same_object_distance_;
 
+  bool merge_objects_;
   int required_observations_;
 
 };

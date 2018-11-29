@@ -25,6 +25,42 @@ ObjectFilterNode::~ObjectFilterNode() {
 
 }
 
+
+void ObjectFilterNode::mergeObjects(double x, double y, int class_id, int object_id) {
+  double x_avg = 0;
+  double y_avg = 0;
+  double observations = 0;
+  bool evidence_published = false;
+  std::vector<int> class_count(15);
+
+  std::vector<Object>::iterator it = objects_.begin();
+  while(it != objects_.end()) {
+      if((std::sqrt(std::pow(it->position.x - x, 2) + std::pow(it->position.y - y, 2)) < same_object_distance_ && similar_objects(it->class_id, class_id)) ||
+          std::sqrt(std::pow(it->position.x - x, 2) + std::pow(it->position.y - y, 2)) < object_distance_) {
+        x_avg += it->position.x * it->observations;
+        y_avg += it->position.x * it->observations;
+        observations += it->observations;
+        for(int i=0; i<it->class_count.size(); ++i) {
+          class_count[i] += it->class_count[i];
+        }
+        if(it->evidence_published)
+          evidence_published = true;
+        it = objects_.erase(it);
+      }
+      else ++it;
+  }
+  x_avg /= observations;
+  y_avg /= observations;
+
+  Object merged_object(x_avg, y_avg, object_id);
+  merged_object.class_count = class_count;
+  merged_object.observations = observations;
+  merged_object.class_id = std::max_element(merged_object.class_count.begin(), merged_object.class_count.end()) - merged_object.class_count.begin();
+  merged_object.evidence_published = true;
+
+  objects_.push_back(merged_object);
+}
+
 void ObjectFilterNode::pointcloud_2d_cb(const PointCloud::ConstPtr& msg) {
   points_in_camera_ = msg->size();
 
@@ -102,6 +138,7 @@ void ObjectFilterNode::init_node() {
   ros::param::param<std::string>("~pointcloud_3d_topic", pointcloud_3d_topic, "/camera/depth_registered/points");
   ros::param::param<std::string>("~pointcloud_2d_topic", pointcloud_2d_topic, "/camera/pointcloud_2d");
   ros::param::param<std::string>("~classified_object_bounding_boxes_topic", boundingbox_topic, "/object_bounding_boxes_classified");
+  ros::param::param<int>("~required_observations", required_observations_, 10);
 
   // pointcloud_2d_subscriber_ = nh_.subscribe<PointCloud>(pointcloud_2d_topic, 1, &ObjectFilterNode::pointcloud_2d_cb, this);
   // pointcloud_3d_subscriber_ = nh_.subscribe<PointCloud>(pointcloud_3d_topic, 1, &ObjectFilterNode::pointcloud_3d_cb, this);
@@ -186,11 +223,16 @@ void ObjectFilterNode::handle_object(double x, double y, int class_id) {
       ++object_it->class_count[class_id];
       ++object_it->observations;
       int most_likely_class = std::max_element(object_it->class_count.begin(), object_it->class_count.end()) - object_it->class_count.begin();
+      if(most_likely_class != object_it->class_id) {
+        // class has changed, try to merge this object with similar objects
+        mergeObjects(object_it->position.x, object_it->position.y, most_likely_class, object_it->id);
+        return; // cant do all the remaining stuff because, the iterator will be invalidated inside mergeObjects
+      }
       object_it->class_id = most_likely_class;
       ROS_INFO_STREAM("Old object: " << object_it->position.x << " " << object_it->position.y << " " << most_likely_class);
       ROS_INFO_STREAM("Seeing old object id " << object_it - objects_.begin());
 
-      if(object_it->observations >= 10 and object_it->evidence_published == false) {
+      if(object_it->observations >= required_observations_ and object_it->evidence_published == false) {
         object_it->evidence_published = true;
         ras_msgs::RAS_Evidence evidence_msg;
         //HERE
@@ -311,139 +353,142 @@ bool ObjectFilterNode::remove_object_cb( er_perception::RemoveObject::Request& r
 void ObjectFilterNode::publish_objects() {
   er_perception::ObjectList objects_msg;
   for(auto object_it = objects_.begin(); object_it != objects_.end(); ++object_it) {
-    er_perception::Object new_object;
-    new_object.x = object_it->position.x;
-    new_object.y = object_it->position.y;
-    new_object.class_id = std::max_element(object_it->class_count.begin(), object_it->class_count.end()) - object_it->class_count.begin() ;
-    new_object.id = object_it->id;
-    objects_msg.objects.push_back(new_object);
+    if(object_it->evidence_published) {
+      er_perception::Object new_object;
+      new_object.x = object_it->position.x;
+      new_object.y = object_it->position.y;
+      new_object.class_id = std::max_element(object_it->class_count.begin(), object_it->class_count.end()) - object_it->class_count.begin() ;
+      new_object.id = object_it->id;
+      objects_msg.objects.push_back(new_object);
+    }
   }
   object_publisher_.publish(objects_msg);
 
   // publish rviz markers
   for(auto object_it = objects_.begin(); object_it != objects_.end(); ++object_it) {
-    double x = object_it->position.x;
-    double y = object_it->position.y;
-    int class_id = std::max_element(object_it->class_count.begin(), object_it->class_count.end()) - object_it->class_count.begin();
-    int id = object_it->id;
+    if(object_it->evidence_published) {
+      double x = object_it->position.x;
+      double y = object_it->position.y;
+      int class_id = std::max_element(object_it->class_count.begin(), object_it->class_count.end()) - object_it->class_count.begin();
+      int id = object_it->id;
 
-    visualization_msgs::Marker marker;
-    marker.header.frame_id = "map";
-    marker.header.stamp = ros::Time();
-    marker.ns = "objects";
-    marker.id = id;
-    marker.action = visualization_msgs::Marker::ADD;
-    marker.pose.position.x = x;
-    marker.pose.position.y = y;
-    marker.pose.orientation.w = 1.0;
+      visualization_msgs::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = ros::Time();
+      marker.ns = "objects";
+      marker.id = id;
+      marker.action = visualization_msgs::Marker::ADD;
+      marker.pose.position.x = x;
+      marker.pose.position.y = y;
+      marker.pose.orientation.w = 1.0;
 
-    // LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
+      // LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
 
-    switch(class_id) {
-      case 0: // yellow ball
-        marker.type = visualization_msgs::Marker::SPHERE;
-        marker.color.r = 1.0;
-        marker.color.g = 0.95;
-        marker.color.b = 0.0;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
-        break;
-      case 1: // yellow cube
-        marker.type = visualization_msgs::Marker::CUBE;
-        marker.color.r = 1.0;
-        marker.color.g = 0.95;
-        marker.color.b = 0.0;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
-        break;
-      case 2: // green cube
-        marker.type = visualization_msgs::Marker::CUBE;
-        marker.color.r = 0;
-        marker.color.g = 1;
-        marker.color.b = 0.0;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
-        break;
-      case 3: // green cube
-        marker.type = visualization_msgs::Marker::CYLINDER;
-        marker.color.r = 0;
-        marker.color.g = 1;
-        marker.color.b = 0.0;
-        marker.color.a = 0.5; // Don't forget to set the alpha!
-        break;
-      case 4: // green hollow cube
-        marker.type = visualization_msgs::Marker::CUBE;
-        marker.color.r = 0;
-        marker.color.g = 1;
-        marker.color.b = 0.0;
-        marker.color.a = 0.5; // Don't forget to set the alpha!
-        break;
-      case 5: // orange cross
-        marker.type = visualization_msgs::Marker::CUBE;
-        marker.color.r = 1;
-        marker.color.g = 0.4;
-        marker.color.b = 0;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
-        break;
-      case 6: // patric (orange star)
-        marker.type = visualization_msgs::Marker::ARROW;
-        marker.color.r = 1;
-        marker.color.g = 0.4;
-        marker.color.b = 0;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
-        break;
-      case 7: // red cylinder
-        marker.type = visualization_msgs::Marker::CYLINDER;
-        marker.color.r = 1;
-        marker.color.g = 0;
-        marker.color.b = 0;
-        marker.color.a = 0.5; // Don't forget to set the alpha!
-        break;
-      case 8: // red hollow cube
-        marker.type = visualization_msgs::Marker::CUBE;
-        marker.color.r = 1;
-        marker.color.g = 0;
-        marker.color.b = 0;
-        marker.color.a = 0.5; // Don't forget to set the alpha!
-        break;
-      case 9: // red ball
-        marker.type = visualization_msgs::Marker::SPHERE;;
-        marker.color.r = 1;
-        marker.color.g = 0;
-        marker.color.b = 0;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
-        break;
-      case 10: // blue cube
-        marker.type = visualization_msgs::Marker::CUBE;;
-        marker.color.r = 0;
-        marker.color.g = 0;
-        marker.color.b = 1;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
-        break;
-      case 11: // blue triangle
-        marker.type = visualization_msgs::Marker::SPHERE;
-        marker.color.r = 0;
-        marker.color.g = 0;
-        marker.color.b = 1;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
-        break;
-      case 12: // purple cross
-        marker.type = visualization_msgs::Marker::CUBE;
-        marker.color.r = 1;
-        marker.color.g = 0;
-        marker.color.b = 1;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
-        break;
-      case 13: // purple star
-        marker.type = visualization_msgs::Marker::ARROW;;
-        marker.color.r = 1;
-        marker.color.g = 0;
-        marker.color.b = 1;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
-        break;
+      switch(class_id) {
+        case 0: // yellow ball
+          marker.type = visualization_msgs::Marker::SPHERE;
+          marker.color.r = 1.0;
+          marker.color.g = 0.95;
+          marker.color.b = 0.0;
+          marker.color.a = 1.0; // Don't forget to set the alpha!
+          break;
+        case 1: // yellow cube
+          marker.type = visualization_msgs::Marker::CUBE;
+          marker.color.r = 1.0;
+          marker.color.g = 0.95;
+          marker.color.b = 0.0;
+          marker.color.a = 1.0; // Don't forget to set the alpha!
+          break;
+        case 2: // green cube
+          marker.type = visualization_msgs::Marker::CUBE;
+          marker.color.r = 0;
+          marker.color.g = 1;
+          marker.color.b = 0.0;
+          marker.color.a = 1.0; // Don't forget to set the alpha!
+          break;
+        case 3: // green cube
+          marker.type = visualization_msgs::Marker::CYLINDER;
+          marker.color.r = 0;
+          marker.color.g = 1;
+          marker.color.b = 0.0;
+          marker.color.a = 0.5; // Don't forget to set the alpha!
+          break;
+        case 4: // green hollow cube
+          marker.type = visualization_msgs::Marker::CUBE;
+          marker.color.r = 0;
+          marker.color.g = 1;
+          marker.color.b = 0.0;
+          marker.color.a = 0.5; // Don't forget to set the alpha!
+          break;
+        case 5: // orange cross
+          marker.type = visualization_msgs::Marker::CUBE;
+          marker.color.r = 1;
+          marker.color.g = 0.4;
+          marker.color.b = 0;
+          marker.color.a = 1.0; // Don't forget to set the alpha!
+          break;
+        case 6: // patric (orange star)
+          marker.type = visualization_msgs::Marker::ARROW;
+          marker.color.r = 1;
+          marker.color.g = 0.4;
+          marker.color.b = 0;
+          marker.color.a = 1.0; // Don't forget to set the alpha!
+          break;
+        case 7: // red cylinder
+          marker.type = visualization_msgs::Marker::CYLINDER;
+          marker.color.r = 1;
+          marker.color.g = 0;
+          marker.color.b = 0;
+          marker.color.a = 0.5; // Don't forget to set the alpha!
+          break;
+        case 8: // red hollow cube
+          marker.type = visualization_msgs::Marker::CUBE;
+          marker.color.r = 1;
+          marker.color.g = 0;
+          marker.color.b = 0;
+          marker.color.a = 0.5; // Don't forget to set the alpha!
+          break;
+        case 9: // red ball
+          marker.type = visualization_msgs::Marker::SPHERE;;
+          marker.color.r = 1;
+          marker.color.g = 0;
+          marker.color.b = 0;
+          marker.color.a = 1.0; // Don't forget to set the alpha!
+          break;
+        case 10: // blue cube
+          marker.type = visualization_msgs::Marker::CUBE;;
+          marker.color.r = 0;
+          marker.color.g = 0;
+          marker.color.b = 1;
+          marker.color.a = 1.0; // Don't forget to set the alpha!
+          break;
+        case 11: // blue triangle
+          marker.type = visualization_msgs::Marker::SPHERE;
+          marker.color.r = 0;
+          marker.color.g = 0;
+          marker.color.b = 1;
+          marker.color.a = 1.0; // Don't forget to set the alpha!
+          break;
+        case 12: // purple cross
+          marker.type = visualization_msgs::Marker::CUBE;
+          marker.color.r = 1;
+          marker.color.g = 0;
+          marker.color.b = 1;
+          marker.color.a = 1.0; // Don't forget to set the alpha!
+          break;
+        case 13: // purple star
+          marker.type = visualization_msgs::Marker::ARROW;;
+          marker.color.r = 1;
+          marker.color.g = 0;
+          marker.color.b = 1;
+          marker.color.a = 1.0; // Don't forget to set the alpha!
+          break;
+      }
+      marker.scale.x = 0.04;
+      marker.scale.y = 0.04;
+      marker.scale.z = 0.04;
+      marker_publisher_.publish( marker );
     }
-    marker.scale.x = 0.04;
-    marker.scale.y = 0.04;
-    marker.scale.z = 0.04;
-    marker_publisher_.publish( marker );
-
   }
 }
 

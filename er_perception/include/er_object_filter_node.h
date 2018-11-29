@@ -17,6 +17,7 @@
 
 #include <string>
 #include <cmath>
+#include <vector>
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
@@ -71,6 +72,7 @@ private:
   bool remove_object_cb(er_perception::RemoveObject::Request& request, er_perception::RemoveObject::Response& response );
   void publish_objects();
   void handle_object(double x, double y, int class_id);
+  void mergeObjects(double x, double y, int class_id, int object_id);
 
   PointCloud::ConstPtr last_3d_pointcloud_msg_;
   er_perception::ClassifiedImage::ConstPtr last_classified_image_msg_;
@@ -103,6 +105,9 @@ private:
 
   double object_distance_;
   double same_object_distance_;
+
+  int required_observations_;
+
 };
 
 

@@ -90,6 +90,7 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
 
   pathfinderMap_pub.publish(occupancy_grid);
 
+/* not relevant anymore due to un-dilutions above
   if(undiluted_grid.data[(int)xGoal + ((int)yGoal)*width] >= 100){ invalidPath = true; }
   if(undiluted_grid.data[(int)xStart + ((int)yStart)*width] >= 100){ invalidPath = true; }
   if( invalidPath )
@@ -97,6 +98,7 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
     if( DEBUG==1 ){ ROS_INFO("Invalid Start or Goal."); }
     return false;
   }
+*/
 
   // init tree and root
   RRTree tree;
@@ -105,24 +107,21 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
 
   while(time_now-time_start < MAX_TIME)
   {
-    TreeNode newNode = generateNode(tree, map, width, height, COLL_THRESH);
-    if( newNode.x == 0 )
-    // timed out
-    {
-      break;
-    }
-    tree.addNode(newNode);
-
+    // check if latest tree node has line of sight to the goal
+    TreeNode newNode = tree.nodes[tree.size-1];
     if(!point_coll(newNode.x, newNode.y, xGoal, yGoal, map, width, height, COLL_THRESH))
     {
+      // finalize if it has - add goal node, translate tree to path etc
       TreeNode lastNode = {xGoal, yGoal, newNode.depth+1, tree.size-1};
       tree.addNode(lastNode);
+
       nav_msgs::Path foundPath;
       foundPath.header = occupancy_grid.header;
       foundPath.poses = unpackPath(tree);
       foundPath.poses = smoothPath(foundPath.poses, occupancy_grid, COLL_THRESH);
       foundPath.poses = scalePath(foundPath.poses, offsetX, offsetY, resolution);
       res.plan = foundPath;
+
       if(DEBUG==1)
       {
         time_now = ros::Time::now().toSec();
@@ -132,9 +131,21 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
       }
       return true;
     }
+
+    // fall-through else:
+    newNode = generateNode(tree, map, width, height, COLL_THRESH);
+    if( newNode.x == 0 )
+    // timed out
+    {
+      break;
+    }
+    tree.addNode(newNode);
+
     time_now = ros::Time::now().toSec();
   }
-  if( DEBUG==1 ){ ROS_INFO("No path found."); }
+
+  // if the while-loop times out:
+  if( DEBUG==1 ){ ROS_INFO("No path found in given time."); }
   return false;
 }
 

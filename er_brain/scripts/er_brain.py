@@ -112,22 +112,30 @@ class BrainNode:
         elapsed_time = time.time()-start_time
         print("reset map")
         reset_map = rospy.ServiceProxy('/slam/reset_localization', Trigger);
-        while elapsed_time < 60:
-            while i < y_cells:
-                while j < x_cells:
-                    min_x = j*width_cell
-                    min_y = i*height_cell
-                    max_x = (j+1)*width_cell
-                    max_y = (i+1)*height_cell
-                    while k < points_per_cell:
-                        x = random.uniform(min_x, max_x)
-                        y = random.uniform(min_y, max_y)
-                        print("x:"+str(x)+" y:"+str(y))
-                        self.goto(x, y)
-                        k = k+1
-                    j = j+1
-                i = i+1
-            elapsed_time = time.time()-start_time
+        #while elapsed_time < 60:
+
+        loopbreak = False
+        for i in range(y_cells):
+            if loopbreak:
+                break
+            for j in range(x_cells):
+                if loopbreak:
+                    break
+                min_x = j*width_cell
+                min_y = i*height_cell
+                max_x = (j+1)*width_cell
+                max_y = (i+1)*height_cell
+                for k in range(points_per_cell):
+                    if loopbreak:
+                        break
+                    x = random.uniform(min_x, max_x)
+                    y = random.uniform(min_y, max_y)
+                    print("x:"+str(x)+" y:"+str(y))
+                    self.goto(x, y)
+                    elapsed_time = time.time()-start_time
+                    if elapsed_time > 60:
+                        print("Exploration time ran out.")
+                        loopbreak = True
         self.goto(0.2, 0.2)
 
     def grab(self ,id):
@@ -252,8 +260,10 @@ class BrainNode:
             for object in self.objects:
                 if object.class_id==index_max:
                     print('Retrieving '+LABELS[index_max]+", internal ID: "+str(object.id))
-                    self.retrieve(object.id)
-                    return True
+                    if self.retrieve(object.id):
+                        return True
+                    else:
+                        print("Cannot retrieve object "+str(object.id)+", "+LABELS[index_max])
             # if not, set the most valuable to 0 and go for the next
             object_values[index_max] = 0
 

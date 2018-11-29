@@ -14,7 +14,7 @@
 #include "nav_msgs/GetPlan.h"
 
 // for the waitForMessage call
-ros::NodeHandle* npointer;
+//ros::NodeHandle* npointer;
 ros::Duration timeout(3.0);
 double time_start, time_now;
 
@@ -22,14 +22,23 @@ double dilute_threshold;
 
 ros::Publisher pathfinderMap_pub;
 ros::Publisher pathfinderPath_pub;
+ros::Subscriber occupancy_grid_sub;
 ros::ServiceServer pathfinder_srv;
+
+nav_msgs::OccupancyGrid occupancy_grid;
+
+void map_update_callback(const nav_msgs::OccupancyGrid::ConstPtr& occupancy_grid_msg)
+{
+  occupancy_grid = *occupancy_grid_msg;
+}
 
 bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response &res)
 {
   time_start = ros::Time::now().toSec();
   time_now = ros::Time::now().toSec();
+
   // get latest map
-  nav_msgs::OccupancyGrid occupancy_grid = *(ros::topic::waitForMessage<nav_msgs::OccupancyGrid>("/slam/occupancy_grid", *npointer, timeout));
+  //nav_msgs::OccupancyGrid occupancy_grid = *(ros::topic::waitForMessage<nav_msgs::OccupancyGrid>("/slam/occupancy_grid", *npointer, timeout));
 
   // dilute map
   nav_msgs::OccupancyGrid undiluted_grid = occupancy_grid;
@@ -90,7 +99,7 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
 
   pathfinderMap_pub.publish(occupancy_grid);
 
-/* not relevant anymore due to un-dilutions above
+  /* not relevant anymore due to un-dilutions above
   if(undiluted_grid.data[(int)xGoal + ((int)yGoal)*width] >= 100){ invalidPath = true; }
   if(undiluted_grid.data[(int)xStart + ((int)yStart)*width] >= 100){ invalidPath = true; }
   if( invalidPath )
@@ -98,7 +107,7 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
     if( DEBUG==1 ){ ROS_INFO("Invalid Start or Goal."); }
     return false;
   }
-*/
+  */
 
   // init tree and root
   RRTree tree;
@@ -153,10 +162,11 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "er_pathfinder_node");
   ros::NodeHandle n;
-  npointer = &n;
-  ros::Rate loop_rate(10);
+  //npointer = &n;
 
   pathfinder_srv = n.advertiseService("/pathfinder/find_path", &path_callback);
+
+  occupancy_grid_sub = n.subscribe("/slam/occupancy_grid",1,map_update_callback);
 
   // load parameter
   ros::param::param<double>("~dilusion_radius", dilute_threshold, 0.2);
@@ -165,10 +175,12 @@ int main(int argc, char **argv)
   pathfinderMap_pub = n.advertise<nav_msgs::OccupancyGrid>("/pathfinder_map",1);
   pathfinderPath_pub = n.advertise<nav_msgs::Path>("/pathfinder_path",1);
 
-  while(ros::ok)
+  ros::spin();
+  ros::Rate loop_rate(10);
+/*  while(ros::ok)
   {
     ros::spinOnce();
     loop_rate.sleep();
-  }
+  }*/
   return 0;
 }

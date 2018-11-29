@@ -11,10 +11,10 @@ from er_planning.msg import PathAction, PathActionGoal
 from nav_msgs.srv import GetPlan
 from std_srvs.srv import Trigger
 from er_perception.msg import ObjectList
+from nav_msgs.msg import OccupancyGrid
 import random
 import time
-
-
+import numpy as np
 
 class BrainNode:
     def __init__(self):
@@ -25,14 +25,24 @@ class BrainNode:
 
         self.path_client = actionlib.SimpleActionClient('path', PathAction)
 
+        # default values of each object:
+        self.object_values = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,0]
+
         self.object_subscriber = rospy.Subscriber("/objects", ObjectList, self.objects_cb)
+        self.map_subscriber = rospy.Subscriber("/slam/occupancy_grid", OccupancyGrid, self.map_cb)
         self.twist_publisher = rospy.Publisher("/cartesian_motor_controller/twist", Twist, queue_size=1)
 
     def objects_cb(self, object_list):
         self.objects = object_list.objects
 
+    def map_cb(self, OccupancyGrid):
+        self.map = OccupancyGrid
+
     def run(self):
         command = ''
+        reset_map = rospy.ServiceProxy('/slam/reset_localization', Trigger);
+        print("Reset map. Brain ready.\n")
+
         while command != 'quit' and command != 'exit':
             command = raw_input('# ')
             snippets = command.split(' ')
@@ -40,7 +50,7 @@ class BrainNode:
                 self.goto(float(snippets[1]), float(snippets[2]))
                 try:
                     pass
-                except ValueError:
+                except (ValueError, IndexError) as e:
                     print('Wrong arguments...')
                     print(snippets[1])
                     print(snippets[2])
@@ -49,17 +59,26 @@ class BrainNode:
             elif snippets[0] == 'grab':
                 try:
                     self.grab(int(snippets[1]))
-                except ValueError:
+                except (ValueError, IndexError) as e:
                     print('Wrong arguments...')
                     print('Available objects are: ')
-                    print(self.objects)
+
+                    LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
+                    for object in self.objects:
+                        print("id: " + str(object.id)+", type: " + LABELS[object.class_id] + ", value: " + str(self.object_values[object.class_id]))
+                        print("pos: ["+str(object.x)+", "+str(object.y)+"]\n")
+                    #print(self.objects)
             elif snippets[0] == 'retrieve':
                 try:
                     self.retrieve(int(snippets[1]))
-                except ValueError:
+                except (ValueError, IndexError) as e:
                     print('Wrong arguments...')
                     print('Available objects are: ')
-                    print(self.objects)
+            elif snippets[0] == 'retrievebest' or snippets[0] == 'retrieve_best':
+                try:
+                    self.retrieve_best()
+                except:
+                    print('Retrieval error')
 
             elif command == 'quit' or command == 'exit':
                 pass
@@ -78,18 +97,38 @@ class BrainNode:
             return False
 
     def explore(self):
+        x_cells = 6
+        y_cells = 10
+        points_per_cell = 1
+        width = self.map.info.width*self.map.info.resolution + 2*self.map.info.origin.position.x
+        height = self.map.info.height*self.map.info.resolution + 2*self.map.info.origin.position.y
+
+        width_cell = width/x_cells
+        height_cell = height/y_cells
+        i = 0
+        j = 0
+        k = 0
         start_time = time.time()
         elapsed_time = time.time()-start_time
         print("reset map")
         reset_map = rospy.ServiceProxy('/slam/reset_localization', Trigger);
         while elapsed_time < 60:
-            x = random.uniform(0.2, 2.0)
-            y = random.uniform(0.2, 2.0)
-            print("x:"+str(x)+" y:"+str(y))
-            self.goto(x, y)
+            while i < y_cells:
+                while j < x_cells:
+                    min_x = j*width_cell
+                    min_y = i*height_cell
+                    max_x = (j+1)*width_cell
+                    max_y = (i+1)*height_cell
+                    while k < points_per_cell:
+                        x = random.uniform(min_x, max_x)
+                        y = random.uniform(min_y, max_y)
+                        print("x:"+str(x)+" y:"+str(y))
+                        self.goto(x, y)
+                        k = k+1
+                    j = j+1
+                i = i+1
             elapsed_time = time.time()-start_time
         self.goto(0.2, 0.2)
-
 
     def grab(self ,id):
         for object in self.objects:
@@ -138,7 +177,7 @@ class BrainNode:
     def goto(self, x, y, remaining_replans=5):
         # find current robot position
         if remaining_replans == 0:
-            print("Had to replan to often, cancel...")
+            print("Had to replan too often, cancel...")
             return False
 
         current_x, current_y = self.get_current_pos()
@@ -192,6 +231,31 @@ class BrainNode:
             print "Service call failed: %s"%e
             return False
 
+    def reevaluate_object(self,object_index,value):
+        self.object_values[object_index] = value
+
+    def retrieve_best(self):
+        LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
+        object_values = self.object_values # local copy of val vector
+
+        while True:
+            # find what object type is most valuable
+            index_max = np.argmax(object_values)
+
+            # if the most valuable object has val 0 then we apparently screwed up
+            if object_values[index_max] == 0:
+                print('No valid objects to grab.')
+                return False
+            #print('Current most valuable object type: '+LABELS[index_max])
+
+            # check if we have seen it and retrieve it
+            for object in self.objects:
+                if object.class_id==index_max:
+                    print('Retrieving '+LABELS[index_max]+", internal ID: "+str(object.id))
+                    self.retrieve(object.id)
+                    return True
+            # if not, set the most valuable to 0 and go for the next
+            object_values[index_max] = 0
 
 if __name__ == '__main__':
     try:

@@ -165,7 +165,7 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
   stop = false;
   near_end = false;
   forward = false;
-  double horizon = 0.2; //set to good value (0.2 seems to be good)
+  double horizon = 0.15; //set to good value (0.2 seems to be good)
   int p = 0;
 
   ros::NodeHandle n;

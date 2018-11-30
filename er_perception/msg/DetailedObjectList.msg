@@ -1,0 +1,1 @@
+DetailedObject[] detailed_objects

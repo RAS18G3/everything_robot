@@ -25,7 +25,11 @@
   <depend>er_planning</depend>
   <depend>pcl_ros</depend>
   <depend>actionlib</depend>
-  
+  <depend>rosbag</depend>
+
+  <exec_depend>message_generation</exec_depend>
+  <exec_depend>message_runtime</exec_depend>
+
   <export>
 
   </export>

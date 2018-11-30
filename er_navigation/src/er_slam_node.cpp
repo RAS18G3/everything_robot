@@ -35,6 +35,77 @@ SLAMNode::~SLAMNode() {
 
 }
 
+bool SLAMNode::load_map(std::string name) {
+  try {
+    rosbag::Bag bag;
+    bag.open(name + ".map", rosbag::bagmode::Read);
+
+    for(rosbag::MessageInstance const m: rosbag::View(bag, rosbag::TopicQuery("current_lidar_map")))
+    {
+      nav_msgs::OccupancyGrid::ConstPtr i = m.instantiate<nav_msgs::OccupancyGrid>();
+      current_lidar_map_ = *i;
+    }
+
+    for(rosbag::MessageInstance const m: rosbag::View(bag, rosbag::TopicQuery("current_map")))
+    {
+      nav_msgs::OccupancyGrid::ConstPtr i = m.instantiate<nav_msgs::OccupancyGrid>();
+      current_map_ = *i;
+    }
+
+    for(rosbag::MessageInstance const m: rosbag::View(bag, rosbag::TopicQuery("current_obstacle_map")))
+    {
+      nav_msgs::OccupancyGrid::ConstPtr i = m.instantiate<nav_msgs::OccupancyGrid>();
+      current_obstacle_map_ = *i;
+    }
+
+    bag.close();
+    return true;
+  }
+  catch (...) {
+    return false;
+  }
+}
+
+bool SLAMNode::save_map(std::string name) {
+  try{
+    rosbag::Bag bag;
+    bag.open(name + ".map", rosbag::bagmode::Write);
+
+    bag.write("current_lidar_map", ros::Time::now(), current_lidar_map_);
+    bag.write("current_map", ros::Time::now(), current_map_);
+    bag.write("current_obstacle_map", ros::Time::now(), current_obstacle_map_);
+
+    bag.close();
+  }
+  catch (...) {
+    return false;
+  }
+}
+
+
+bool SLAMNode::load_cb(er_navigation::MapLoadSave::Request& request, er_navigation::MapLoadSave::Response& response ) {
+  if(load_map(request.name)) {
+    response.success = true;
+    return true;
+  }
+  else {
+    response.success = false;
+    return true;
+  }
+}
+
+bool SLAMNode::save_cb(er_navigation::MapLoadSave::Request& request, er_navigation::MapLoadSave::Response& response ) {
+  if(save_map(request.name)) {
+    response.success = true;
+    return true;
+  }
+  else {
+    response.success = false;
+    return true;
+  }
+
+}
+
 void SLAMNode::init_node() {
   std::string map_path;
   std::string odometry_topic;
@@ -77,6 +148,8 @@ void SLAMNode::init_node() {
 
   // advertise the service which will reset the localization
   reset_localization_service_ = nh_.advertiseService(node_name + "/reset_localization", &SLAMNode::reset_localization_cb, this);
+  load_service_ = nh_.advertiseService(node_name + "/load_map", &SLAMNode::load_cb, this);
+  save_service_ = nh_.advertiseService(node_name + "/save_map", &SLAMNode::save_cb, this);
 
   // reset map
   current_map_ = map_reader_.occupancy_grid(map_margin_);

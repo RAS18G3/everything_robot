@@ -105,7 +105,7 @@ void ObjectFilterNode::boundingbox_cb(const er_perception::ClassifiedImage::Cons
     // use intrinsics to get position relative to base_link
     double alpha =(x + width/2.0 - 313.0) / 616.;
     double beta =(y + 0.9*height - 239.0) / 616.;
-    double camera_angle = 0.5;
+    double camera_angle = 0.46;
     double height = 0.133;
     double camera_offset_y = 0.09;
     double y_test = (std::cos(camera_angle)*height - beta*std::sin(camera_angle)*height) / ( beta * std::cos(camera_angle) + std::sin(camera_angle) );
@@ -165,6 +165,8 @@ void ObjectFilterNode::init_node() {
 
   reset_objects_service_ = nh_.advertiseService(node_name + "/reset_objects", &ObjectFilterNode::reset_objects_cb, this);
   remove_object_service_ = nh_.advertiseService(node_name + "/remove_object", &ObjectFilterNode::remove_object_cb, this);
+  save_service_ = nh_.advertiseService(node_name + "/save", &ObjectFilterNode::save_cb, this);
+  load_service_ = nh_.advertiseService(node_name + "/load", &ObjectFilterNode::load_cb, this);
 }
 
 void ObjectFilterNode::process_data() {
@@ -333,6 +335,81 @@ void ObjectFilterNode::handle_object(double x, double y, int class_id) {
     objects_.back().observations = 1;
     objects_.back().class_id = class_id;
     ROS_INFO_STREAM("New object: " << x << " " << y << " " << class_id << ", Total objects: " << objects_.size());
+  }
+}
+
+bool ObjectFilterNode::load_cb(er_perception::ObjectLoadSave::Request& request, er_perception::ObjectLoadSave::Response& response ) {
+  er_perception::DetailedObjectList detailed_object_list;
+
+  try {
+    rosbag::Bag bag;
+    bag.open(request.name + ".objectlist", rosbag::bagmode::Read);
+
+    for(rosbag::MessageInstance const m: rosbag::View(bag, rosbag::TopicQuery("object_list")))
+    {
+      er_perception::DetailedObjectList::ConstPtr i = m.instantiate<er_perception::DetailedObjectList>();
+      detailed_object_list = *i;
+    }
+
+    bag.close();
+
+    objects_.clear();
+    for(auto objects_it = detailed_object_list.detailed_objects.begin(); objects_it!=detailed_object_list.detailed_objects.end(); ++objects_it ) {
+      Object restored_object(objects_it->x, objects_it->y, objects_it->id);
+      restored_object.class_id = objects_it->class_id;
+      restored_object.observations = objects_it->observations;
+      restored_object.class_count = objects_it->class_observations;
+      restored_object.evidence_published = objects_it->evidence_published;
+      objects_.push_back(restored_object);
+    }
+
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "map";
+    marker.header.stamp = ros::Time();
+    marker.ns = "objects";
+    marker.action = visualization_msgs::Marker::DELETEALL;
+    marker_publisher_.publish(marker);
+
+    response.success = true;
+
+    return true;
+  }
+  catch (...) {
+    response.success = false;
+    return true;
+  }
+}
+
+bool ObjectFilterNode::save_cb(er_perception::ObjectLoadSave::Request& request, er_perception::ObjectLoadSave::Response& response ) {
+  // transform object list to rosbag compatible type
+  er_perception::DetailedObjectList detailed_object_list;
+  for(auto objects_it = objects_.begin(); objects_it!=objects_.end(); ++objects_it ) {
+    er_perception::DetailedObject detailed_object;
+    detailed_object.x = objects_it->position.x;
+    detailed_object.y = objects_it->position.y;
+    detailed_object.class_id = objects_it->class_id;
+    detailed_object.observations = objects_it->observations;
+    detailed_object.id = objects_it->id;
+    detailed_object.class_observations = objects_it->class_count;
+    detailed_object.evidence_published = objects_it->evidence_published;
+    detailed_object_list.detailed_objects.push_back(detailed_object);
+  }
+
+  try{
+    rosbag::Bag bag;
+    bag.open(request.name + ".objectlist", rosbag::bagmode::Write);
+
+    bag.write("object_list", ros::Time::now(), detailed_object_list);
+
+    bag.close();
+
+    response.success = true;
+
+    return true;
+  }
+  catch (...) {
+    response.success = false;
+    return true;
   }
 }
 

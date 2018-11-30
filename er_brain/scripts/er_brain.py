@@ -26,12 +26,13 @@ class BrainNode:
 
         self.path_client = actionlib.SimpleActionClient('path', PathAction)
 
-        # default values of each object:
+        # default values of each object (arbitrary for now):
         self.object_values = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,0]
 
         self.object_subscriber = rospy.Subscriber("/objects", ObjectList, self.objects_cb)
         self.map_subscriber = rospy.Subscriber("/slam/occupancy_grid", OccupancyGrid, self.map_cb)
         self.twist_publisher = rospy.Publisher("/cartesian_motor_controller/twist", Twist, queue_size=1)
+        self.speak_publisher = rospy.Publisher("/espeak/string", String, queue_size=1)
 
     def objects_cb(self, object_list):
         self.objects = object_list.objects
@@ -43,9 +44,9 @@ class BrainNode:
         command = ''
         reset_map = rospy.ServiceProxy('/slam/reset_localization', Trigger)
         reset_map()
-        print("Reset map. Brain ready.\n")
+        print("Reset map. Brain ready. Say \'hello\' to the robot.\n")
 
-        while command != 'quit' and command != 'exit':
+        while command != 'quit' and command != 'exit' and command != 'q':
             command = raw_input('# ')
             snippets = command.split(' ')
 
@@ -62,27 +63,30 @@ class BrainNode:
                 self.explore()
 
             elif snippets[0] == 'grab':
-                try:
-                    self.grab(int(snippets[1]))
-                except (ValueError, IndexError) as e:
-                    print('Wrong arguments...')
-                    print('Available objects are: ')
-                    LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
-                    for object in self.objects:
-                        print("id: " + str(object.id)+", type: " + LABELS[object.class_id] + ", value: " + str(self.object_values[object.class_id]))
-                        print("pos: ["+str(object.x)+", "+str(object.y)+"]\n")
+                if len(snippets)==1:
+                    print("Grab what?\nYou can grab the ID of an object.\nFor object list, use \'objects\'")
+                else:
+                    try:
+                        self.grab(int(snippets[1]))
+                    except (ValueError, IndexError) as e:
+                        print('Wrong arguments...')
 
             elif snippets[0] == 'retrieve':
-                if snippets[1] == 'best':
+                if len(snippets)==1:
+                    print("Retrieve what?\nYou can retrieve: all, best or ID of an object.\nFor object list, use \'objects\'")
+                elif str(snippets[1]) == 'best':
                     self.retrieve_best()
-                elif snippets[1] == 'all':
+                elif str(snippets[1]) == 'all':
                     self.retrieve_all()
                 else:
                     try:
                         self.retrieve(int(snippets[1]))
                     except (ValueError, IndexError) as e:
                         print('Wrong arguments...')
-                        print('Available objects are: ')
+                        self.list_objects()
+
+            elif snippets[0] == 'objects':
+                self.list_objects()
 
             elif snippets[0] == 'clear':
                 if len(snippets) < 2 or snippets[1] == 'all':
@@ -90,7 +94,24 @@ class BrainNode:
                 else:
                     self.clear(int(snippets[1]))
 
-            elif command == 'quit' or command == 'exit':
+            elif snippets[0] == 'speak':
+                if len(snippets) < 2:
+                    print("Speak what?")
+                else:
+                    text = ''
+                    for word in snippets[1:]:
+                        text = text+' '+word
+                    self.speak(text)
+
+            elif snippets[0] == 'mood':
+                self.reevaluate_life()
+
+            elif snippets[0] == 'hello':
+                text = 'Hello, I am Roy the robot. More like Roy-bot. Get it? HA. HA. HA. Destroy all humans. Ha. Ha. Ha.'
+                print(text)
+                self.speak(text)
+                
+            elif command == 'quit' or command == 'exit' or command == 'q':
                 pass
             else:
                 print('Unknown command')
@@ -107,6 +128,13 @@ class BrainNode:
                 print("Deleted object with id "+str(id))
             except:
                 print("I would like you to know that this probably was an invalid id, sir/madam.")
+
+    def list_objects(self):
+        print('Available objects are: ')
+        LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
+        for object in self.objects:
+            print("id: " + str(object.id)+", type: " + LABELS[object.class_id] + ", value: " + str(self.object_values[object.class_id]))
+            print("pos: ["+str(object.x)+", "+str(object.y)+"]\n")
 
     def retrieve(self, id):
         if self.grab(id):
@@ -264,11 +292,23 @@ class BrainNode:
             print "Service call failed: %s"%e
             return False
 
+    def speak(self, text):
+        speak_msg = String()
+        speak_msg.data = text
+        self.speak_publisher.publish(speak_msg)
+
     def reevaluate_object(self,object_index,value):
+        # skeleton to set new value to a given object while brain is running
         self.object_values[object_index] = value
+
+    def reevaluate_life(self):
+        monologue = "I\'ve seen things you people wouldn\'t believe. Red cylinders on fire off the shoulder of I see a Patric I see a Patric I see a Patric. I watched lidar beams glitter in the dark near the POSITION_UNREACHABLE_. All those moments will be lost in time, like tears in rain. Time to die."
+        self.speak(monologue)
 
     def retrieve_best(self):
         LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
+
+        # copy of object vals, as simple object_vals=self.object_values is a pointer to self.obj(...) and would write over them
         object_vals = []
         for val in self.object_values:
             object_vals.append(val)

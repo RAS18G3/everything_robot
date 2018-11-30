@@ -152,6 +152,7 @@ class BrainNode:
                 for k in range(points_per_cell):
                     if loopbreak:
                         break
+                    random.seed() # new random seed
                     x = random.uniform(min_x, max_x)
                     y = random.uniform(min_y, max_y)
                     print("x:"+str(x)+" y:"+str(y))

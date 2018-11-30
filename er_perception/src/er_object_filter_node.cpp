@@ -148,7 +148,7 @@ void ObjectFilterNode::init_node() {
   ros::param::param<std::string>("~pointcloud_3d_topic", pointcloud_3d_topic, "/camera/depth_registered/points");
   ros::param::param<std::string>("~pointcloud_2d_topic", pointcloud_2d_topic, "/camera/pointcloud_2d");
   ros::param::param<std::string>("~classified_object_bounding_boxes_topic", boundingbox_topic, "/object_bounding_boxes_classified");
-  ros::param::param<int>("~required_observations", required_observations_, 10);
+  ros::param::param<int>("~required_observations", required_observations_, 5);
   ros::param::param<bool>("~merge_objects_", merge_objects_, true);
 
   // pointcloud_2d_subscriber_ = nh_.subscribe<PointCloud>(pointcloud_2d_topic, 1, &ObjectFilterNode::pointcloud_2d_cb, this);

@@ -87,7 +87,7 @@ bool path_callback(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response 
       }
     }
     // remove dilution with larger radius
-    const int remove_radius = dilute_threshold*1.4 / resolution;
+    const int remove_radius = dilute_threshold / resolution;
     for(int x=xGoal - remove_radius; x < xGoal + remove_radius; ++x) {
       for(int y=yGoal - remove_radius; y < yGoal + remove_radius; ++y) {
         if(undiluted_grid.data[x + y*width ] <= 50) {

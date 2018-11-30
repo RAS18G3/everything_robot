@@ -33,12 +33,14 @@ void ObjectFilterNode::mergeObjects(double x, double y, int class_id, int object
   bool evidence_published = false;
   std::vector<int> class_count(15);
 
+  ROS_INFO_STREAM("Merge objects");
+
   std::vector<Object>::iterator it = objects_.begin();
   while(it != objects_.end()) {
       if((std::sqrt(std::pow(it->position.x - x, 2) + std::pow(it->position.y - y, 2)) < same_object_distance_ && similar_objects(it->class_id, class_id)) ||
           std::sqrt(std::pow(it->position.x - x, 2) + std::pow(it->position.y - y, 2)) < object_distance_) {
         x_avg += it->position.x * it->observations;
-        y_avg += it->position.x * it->observations;
+        y_avg += it->position.y * it->observations;
         observations += it->observations;
         for(int i=0; i<it->class_count.size(); ++i) {
           class_count[i] += it->class_count[i];
@@ -59,6 +61,14 @@ void ObjectFilterNode::mergeObjects(double x, double y, int class_id, int object
   merged_object.evidence_published = true;
 
   objects_.push_back(merged_object);
+
+
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = "map";
+  marker.header.stamp = ros::Time();
+  marker.ns = "objects";
+  marker.action = visualization_msgs::Marker::DELETEALL;
+  marker_publisher_.publish(marker);
 }
 
 void ObjectFilterNode::pointcloud_2d_cb(const PointCloud::ConstPtr& msg) {
@@ -230,8 +240,8 @@ void ObjectFilterNode::handle_object(double x, double y, int class_id) {
         return; // cant do all the remaining stuff because, the iterator will be invalidated inside mergeObjects
       }
       object_it->class_id = most_likely_class;
-      ROS_INFO_STREAM("Old object: " << object_it->position.x << " " << object_it->position.y << " " << most_likely_class);
-      ROS_INFO_STREAM("Seeing old object id " << object_it - objects_.begin());
+      // ROS_INFO_STREAM("Old object: " << object_it->position.x << " " << object_it->position.y << " " << most_likely_class);
+      // ROS_INFO_STREAM("Seeing old object id " << object_it - objects_.begin());
 
       if(object_it->observations >= required_observations_ and object_it->evidence_published == false) {
         object_it->evidence_published = true;
@@ -313,6 +323,7 @@ void ObjectFilterNode::handle_object(double x, double y, int class_id) {
     objects_.emplace_back(x, y, id_counter++);
     ++objects_.back().class_count.at(class_id);
     objects_.back().observations = 1;
+    objects_.back().class_id = class_id;
     ROS_INFO_STREAM("New object: " << x << " " << y << " " << class_id << ", Total objects: " << objects_.size());
   }
 }
@@ -364,6 +375,7 @@ void ObjectFilterNode::publish_objects() {
     }
   }
   object_publisher_.publish(objects_msg);
+
 
   // publish rviz markers
   for(auto object_it = objects_.begin(); object_it != objects_.end(); ++object_it) {

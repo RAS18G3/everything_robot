@@ -110,7 +110,7 @@ class BrainNode:
                 text = 'Hello, I am Roy the robot. More like Roy-bot. Get it? HA. HA. HA. Destroy all humans. Ha. Ha. Ha.'
                 print(text)
                 self.speak(text)
-                
+
             elif command == 'quit' or command == 'exit' or command == 'q':
                 pass
             else:
@@ -149,9 +149,9 @@ class BrainNode:
             return False
 
     def explore(self):
-        x_cells = 6
-        y_cells = 10
-        points_per_cell = 1
+        x_cells = 2
+        y_cells = 2
+        points_per_cell = 3
         width = self.map.info.width*self.map.info.resolution + 2*self.map.info.origin.position.x
         height = self.map.info.height*self.map.info.resolution + 2*self.map.info.origin.position.y
 
@@ -181,12 +181,12 @@ class BrainNode:
                     if loopbreak:
                         break
                     random.seed() # new random seed
-                    x = random.uniform(min_x, max_x)
-                    y = random.uniform(min_y, max_y)
+                    x = random.uniform(min_x+0.1, max_x-0.1)
+                    y = random.uniform(min_y+0.1, max_y-0.1)
                     print("x:"+str(x)+" y:"+str(y))
                     self.goto(x, y)
                     elapsed_time = time.time()-start_time
-                    if elapsed_time > 120:
+                    if elapsed_time > 240:
                         print("Exploration time ran out.")
                         loopbreak = True
         self.goto(0.2, 0.2)

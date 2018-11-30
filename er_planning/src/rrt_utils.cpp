@@ -68,6 +68,7 @@ TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int heigh
   {
     time_now = ros::Time::now().toSec();
     // generate random x and y
+    srand (time(NULL)); // get new random seed
     double x = rand() % width+1;
     double y = rand() % height+1;
 

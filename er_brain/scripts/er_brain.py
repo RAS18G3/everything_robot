@@ -338,7 +338,7 @@ class BrainNode:
     def retrieve_all(self):
         retrieval_success = True
         while(retrieval_success):
-            retrieval_success = retrieve_best()
+            retrieval_success = self.retrieve_best()
 
 if __name__ == '__main__':
     try:

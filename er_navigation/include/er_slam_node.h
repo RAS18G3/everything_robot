@@ -103,6 +103,7 @@ private:
   int tracking_particles_;
   double camera_fov_;
   double camera_range_;
+  double safearea_xmin_, safearea_xmax_, safearea_ymin_, safearea_ymax_;
 
 };
 

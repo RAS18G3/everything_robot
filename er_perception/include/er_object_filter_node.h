@@ -109,6 +109,8 @@ private:
   bool merge_objects_;
   int required_observations_;
 
+  double safearea_xmin_, safearea_xmax_, safearea_ymin_, safearea_ymax_;
+
 };
 
 

@@ -59,6 +59,10 @@ void SLAMNode::init_node() {
   ros::param::param<int>("~tracking_particles", tracking_particles_, 1000);
   ros::param::param<double>("~camera_fov", camera_fov_, 60);
   ros::param::param<double>("~camera_range", camera_range_, 0.3);
+  ros::param::param<double>("/safe_area/x_min", safearea_xmin_, 0.0);
+  ros::param::param<double>("/safe_area/x_max", safearea_xmax_, 0.5);
+  ros::param::param<double>("/safe_area/y_min", safearea_ymin_, 0.0);
+  ros::param::param<double>("/safe_area/y_max", safearea_ymax_, 0.5);
 
   map_reader_ = MapReader(map_path);
 
@@ -104,7 +108,10 @@ void SLAMNode::run_node() {
 
     }
 
-    map_publisher_.publish(merge_maps(current_lidar_map_, current_obstacle_map_));
+    nav_msgs::OccupancyGrid merged_map = merge_maps(current_lidar_map_, current_obstacle_map_);
+    clear_area(merged_map, safearea_xmin_, safearea_xmax_, safearea_ymin_, safearea_ymax_);
+    map_publisher_.publish(merged_map);
+
     // map_publisher_.publish(current_obstacle_map_);
 
 

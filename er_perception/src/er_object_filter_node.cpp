@@ -143,6 +143,10 @@ void ObjectFilterNode::init_node() {
   std::string pointcloud_3d_topic;
   std::string boundingbox_topic;
   ros::param::param<int>("~threshold", threshold_, 100);
+  ros::param::param<double>("/safe_area/x_min", safearea_xmin_, 0.0);
+  ros::param::param<double>("/safe_area/x_max", safearea_xmax_, 0.5);
+  ros::param::param<double>("/safe_area/y_min", safearea_ymin_, 0.0);
+  ros::param::param<double>("/safe_area/y_max", safearea_ymax_, 0.5);
   ros::param::param<double>("~object_distance", object_distance_, 0.03);
   ros::param::param<double>("~same_object_distance", same_object_distance_, 0.2);
   ros::param::param<std::string>("~pointcloud_3d_topic", pointcloud_3d_topic, "/camera/depth_registered/points");
@@ -221,6 +225,10 @@ void ObjectFilterNode::process_data() {
 }
 
 void ObjectFilterNode::handle_object(double x, double y, int class_id) {
+  if(x >= safearea_xmin_ && x <= safearea_xmax_ && y >= safearea_ymin_ && y <= safearea_ymax_) {
+    return;
+  }
+
   // check if there is a similar object in the map already
   bool new_object = true;
   // ROS_INFO_STREAM(x << " " << y << " " << class_id);

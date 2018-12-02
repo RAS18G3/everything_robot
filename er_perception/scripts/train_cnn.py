@@ -94,6 +94,8 @@ if mode == "TRAIN":
     def build_model():
         model = models.Sequential()
         model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(inputsize[0], inputsize[1], 3)))
+        # model.add(layers.MaxPooling2D((2,2)))
+        model.add(layers.Conv2D(256, (3,3), activation='relu'))
         model.add(layers.MaxPooling2D((2,2)))
         model.add(layers.Conv2D(256, (3, 3), activation='relu'))
         model.add(layers.MaxPooling2D((2,2)))
@@ -136,6 +138,8 @@ if mode == "TRAIN":
                 # print(os.path.join(image_dir, image_file))
                 # print(img.shape)
                 training_data.append(np.asarray(img))
+                training_data.append(np.asarray(cv2.flip(img,1)))
+                training_labels.append(to_categorical(class_idx, num_classes=15))
                 training_labels.append(to_categorical(class_idx, num_classes=15))
             class_idx += 1
 

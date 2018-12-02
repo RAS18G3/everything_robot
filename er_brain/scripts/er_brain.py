@@ -144,6 +144,7 @@ class BrainNode:
             if self.goto(0.2, 0.2):
                 self.end_grip()
                 self.clear(id)
+                return True
             else:
                 print('Error while going back')
                 return False

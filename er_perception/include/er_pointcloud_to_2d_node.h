@@ -33,6 +33,8 @@ private:
   ros::Subscriber pointcloud_subsriber_;
   ros::Publisher pointcloud_publisher_;
   tf::TransformListener tf_listener_;
+
+  double safearea_xmax_, safearea_xmin_, safearea_ymax_, safearea_ymin_;
 };
 
 

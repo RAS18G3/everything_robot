@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
 #  cv_bridge
   rospy
   message_generation
+  rosbag
 )
 
 add_compile_options(-std=c++11)
@@ -21,11 +22,14 @@ add_message_files(
   ObjectList.msg
   ClassifiedBoundingBox.msg
   ClassifiedImage.msg
+  DetailedObject.msg
+  DetailedObjectList.msg
 )
 
 add_service_files(
   FILES
   RemoveObject.srv
+  ObjectLoadSave.srv
 )
 
 generate_messages(
@@ -36,7 +40,7 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS message_runtime roscpp std_msgs sensor_msgs pcl_ros tf2
+  CATKIN_DEPENDS message_runtime roscpp std_msgs sensor_msgs pcl_ros tf2 rosbag
 )
 
 include_directories(

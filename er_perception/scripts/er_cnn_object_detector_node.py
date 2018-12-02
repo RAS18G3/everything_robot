@@ -12,7 +12,7 @@ import keras
 import os
 from er_perception.msg import ClassifiedImage, ClassifiedBoundingBox
 
-DEBUG = False
+DEBUG = True
 PUBLISH = True
 
 LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']

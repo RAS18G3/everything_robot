@@ -13,7 +13,12 @@
 #include "std_srvs/Trigger.h"
 #include "ras_msgs/RAS_Evidence.h"
 #include "std_msgs/String.h"
+#include "er_perception/ObjectLoadSave.h"
+#include "er_perception/DetailedObjectList.h"
 
+
+#include <rosbag/bag.h>
+#include "rosbag/view.h"
 
 #include <string>
 #include <cmath>
@@ -68,8 +73,10 @@ private:
   void pointcloud_2d_cb(const PointCloud::ConstPtr& msg);
   void pointcloud_3d_cb(const PointCloud::ConstPtr& msg);
   void boundingbox_cb(const er_perception::ClassifiedImage::ConstPtr& msg);
+  bool remove_object_cb( er_perception::RemoveObject::Request& request, er_perception::RemoveObject::Response& response );
   bool reset_objects_cb(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response );
-  bool remove_object_cb(er_perception::RemoveObject::Request& request, er_perception::RemoveObject::Response& response );
+  bool load_cb(er_perception::ObjectLoadSave::Request& request, er_perception::ObjectLoadSave::Response& response );
+  bool save_cb(er_perception::ObjectLoadSave::Request& request, er_perception::ObjectLoadSave::Response& response );
   void publish_objects();
   void handle_object(double x, double y, int class_id);
   void mergeObjects(double x, double y, int class_id, int object_id);
@@ -93,6 +100,8 @@ private:
   ros::Publisher  speak_publisher_;
   ros::ServiceServer reset_objects_service_;
   ros::ServiceServer remove_object_service_;
+  ros::ServiceServer save_service_;
+  ros::ServiceServer load_service_;
   tf::TransformListener tf_listener_;
 
   ros::Rate loop_rate_;
@@ -108,6 +117,8 @@ private:
 
   bool merge_objects_;
   int required_observations_;
+
+  double safearea_xmin_, safearea_xmax_, safearea_ymin_, safearea_ymax_;
 
 };
 

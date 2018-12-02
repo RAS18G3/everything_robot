@@ -28,9 +28,9 @@ bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> 
   double vec_y = y2-y1; // dy
 
   // normalize vector
-  double vec_magnitude = 2*sqrt(vec_x*vec_x + vec_y*vec_y);
-  vec_x /= 2*vec_magnitude;
-  vec_y /= 2*vec_magnitude;
+  double vec_magnitude = 8*sqrt(vec_x*vec_x + vec_y*vec_y);
+  vec_x /= vec_magnitude;
+  vec_y /= vec_magnitude;
 
   while(1)
   {
@@ -64,10 +64,11 @@ TreeNode generateNode(RRTree tree, std::vector<int8_t> map, int width, int heigh
   time_now = ros::Time::now().toSec();
 
   int tree_size = tree.size;
-  while(time_now-time_start < 10)
+  while(time_now-time_start < 2)
   {
     time_now = ros::Time::now().toSec();
     // generate random x and y
+    //srand(time(NULL)); // get new random seed
     double x = rand() % width+1;
     double y = rand() % height+1;
 

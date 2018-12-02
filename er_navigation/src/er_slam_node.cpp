@@ -35,6 +35,77 @@ SLAMNode::~SLAMNode() {
 
 }
 
+bool SLAMNode::load_map(std::string name) {
+  try {
+    rosbag::Bag bag;
+    bag.open(name + ".map", rosbag::bagmode::Read);
+
+    for(rosbag::MessageInstance const m: rosbag::View(bag, rosbag::TopicQuery("current_lidar_map")))
+    {
+      nav_msgs::OccupancyGrid::ConstPtr i = m.instantiate<nav_msgs::OccupancyGrid>();
+      current_lidar_map_ = *i;
+    }
+
+    for(rosbag::MessageInstance const m: rosbag::View(bag, rosbag::TopicQuery("current_map")))
+    {
+      nav_msgs::OccupancyGrid::ConstPtr i = m.instantiate<nav_msgs::OccupancyGrid>();
+      current_map_ = *i;
+    }
+
+    for(rosbag::MessageInstance const m: rosbag::View(bag, rosbag::TopicQuery("current_obstacle_map")))
+    {
+      nav_msgs::OccupancyGrid::ConstPtr i = m.instantiate<nav_msgs::OccupancyGrid>();
+      current_obstacle_map_ = *i;
+    }
+
+    bag.close();
+    return true;
+  }
+  catch (...) {
+    return false;
+  }
+}
+
+bool SLAMNode::save_map(std::string name) {
+  try{
+    rosbag::Bag bag;
+    bag.open(name + ".map", rosbag::bagmode::Write);
+
+    bag.write("current_lidar_map", ros::Time::now(), current_lidar_map_);
+    bag.write("current_map", ros::Time::now(), current_map_);
+    bag.write("current_obstacle_map", ros::Time::now(), current_obstacle_map_);
+
+    bag.close();
+  }
+  catch (...) {
+    return false;
+  }
+}
+
+
+bool SLAMNode::load_cb(er_navigation::MapLoadSave::Request& request, er_navigation::MapLoadSave::Response& response ) {
+  if(load_map(request.name)) {
+    response.success = true;
+    return true;
+  }
+  else {
+    response.success = false;
+    return true;
+  }
+}
+
+bool SLAMNode::save_cb(er_navigation::MapLoadSave::Request& request, er_navigation::MapLoadSave::Response& response ) {
+  if(save_map(request.name)) {
+    response.success = true;
+    return true;
+  }
+  else {
+    response.success = false;
+    return true;
+  }
+
+}
+
 void SLAMNode::init_node() {
   std::string map_path;
   std::string odometry_topic;
@@ -59,6 +130,10 @@ void SLAMNode::init_node() {
   ros::param::param<int>("~tracking_particles", tracking_particles_, 1000);
   ros::param::param<double>("~camera_fov", camera_fov_, 60);
   ros::param::param<double>("~camera_range", camera_range_, 0.3);
+  ros::param::param<double>("/safe_area/x_min", safearea_xmin_, 0.0);
+  ros::param::param<double>("/safe_area/x_max", safearea_xmax_, 0.5);
+  ros::param::param<double>("/safe_area/y_min", safearea_ymin_, 0.0);
+  ros::param::param<double>("/safe_area/y_max", safearea_ymax_, 0.5);
 
   map_reader_ = MapReader(map_path);
 
@@ -73,6 +148,8 @@ void SLAMNode::init_node() {
 
   // advertise the service which will reset the localization
   reset_localization_service_ = nh_.advertiseService(node_name + "/reset_localization", &SLAMNode::reset_localization_cb, this);
+  load_service_ = nh_.advertiseService(node_name + "/load_map", &SLAMNode::load_cb, this);
+  save_service_ = nh_.advertiseService(node_name + "/save_map", &SLAMNode::save_cb, this);
 
   // reset map
   current_map_ = map_reader_.occupancy_grid(map_margin_);
@@ -104,7 +181,10 @@ void SLAMNode::run_node() {
 
     }
 
-    map_publisher_.publish(merge_maps(current_lidar_map_, current_obstacle_map_));
+    nav_msgs::OccupancyGrid merged_map = merge_maps(current_lidar_map_, current_obstacle_map_);
+    clear_area(merged_map, safearea_xmin_, safearea_xmax_, safearea_ymin_, safearea_ymax_);
+    map_publisher_.publish(merged_map);
+
     // map_publisher_.publish(current_obstacle_map_);
 
 

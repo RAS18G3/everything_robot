@@ -15,5 +15,6 @@ double ray_cast_update(nav_msgs::OccupancyGrid &occupancy_grid, double x, double
 double ray_cast(nav_msgs::OccupancyGrid &occupancy_grid, double x, double y, double angle, double error_value=10);
 int8_t&  at(nav_msgs::OccupancyGrid &occupancy_grid, int x, int y);
 int sign(int x);
+void clear_area(nav_msgs::OccupancyGrid &occupancy_grid, double x_min, double x_max, double y_min, double y_max);
 
 #endif

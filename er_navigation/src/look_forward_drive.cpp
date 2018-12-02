@@ -152,20 +152,12 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
   for(int i = 0; i < path.poses.size(); i++){
     goal_xarr.push_back(path.poses.at(i).pose.position.x);
     goal_yarr.push_back(path.poses.at(i).pose.position.y);
-    // if(last_was_y){
-    //   goal_xarr.push_back(path.poses.at(i));
-    //   last_was_y = false;
-    // }
-    // else{
-    //   goal_yarr.push_back(path.at(i));
-    //   last_was_y = true;
-    // }
   }
 
   stop = false;
   near_end = false;
   forward = false;
-  double horizon = 0.15; //set to good value (0.2 seems to be good)
+  double horizon = 0.15;
   int p = 0;
 
   ros::NodeHandle n;

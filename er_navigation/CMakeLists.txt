@@ -10,13 +10,25 @@ find_package(catkin REQUIRED COMPONENTS
   er_planning
   pcl_ros
   actionlib
+  rosbag
+  message_generation
+)
+
+add_service_files(
+  FILES
+  MapLoadSave.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs  # and/or other packages containing depended messages
 )
 
 add_compile_options(-std=c++11)
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp nav_msgs tf tf2 geometry_msgs er_planning pcl_ros actionlib
+  CATKIN_DEPENDS roscpp nav_msgs tf tf2 geometry_msgs er_planning pcl_ros actionlib rosbag message_runtime
 )
 
 include_directories(
@@ -28,7 +40,7 @@ add_executable(er_drive_node src/er_drive_node.cpp)
 add_executable(look_forward_drive src/look_forward_drive.cpp)
 add_executable(er_explore_node src/er_explore_node.cpp)
 
-add_dependencies(er_slam_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(er_slam_node er_navigation_generate_messages_cpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(er_drive_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(look_forward_drive ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(er_explore_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

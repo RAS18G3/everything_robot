@@ -34,6 +34,18 @@ nav_msgs::OccupancyGrid merge_maps(nav_msgs::OccupancyGrid &occupancy_grid_1, na
   return merged_grid;
 }
 
+void clear_area(nav_msgs::OccupancyGrid &occupancy_grid, double x_min, double x_max, double y_min, double y_max) {
+  x_min = (x_min - occupancy_grid.info.origin.position.x) / occupancy_grid.info.resolution;
+  y_min = (y_min - occupancy_grid.info.origin.position.y) / occupancy_grid.info.resolution;
+  x_max = (x_max - occupancy_grid.info.origin.position.x) / occupancy_grid.info.resolution;
+  y_max = (y_max - occupancy_grid.info.origin.position.y) / occupancy_grid.info.resolution;
+
+  for(int x = x_min; x<=x_max; ++x)
+    for(int y= y_min; y<=y_max; ++y)
+      if( at(occupancy_grid, x, y) != 100)
+        at(occupancy_grid, x, y) = 0;
+}
+
 double ray_cast_update_mult(nav_msgs::OccupancyGrid &occupancy_grid, double x, double y, double angle, double range, double decrease, double increase) {
   // find starting grid index
   x = (x - occupancy_grid.info.origin.position.x) / occupancy_grid.info.resolution;

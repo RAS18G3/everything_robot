@@ -33,12 +33,14 @@ void ObjectFilterNode::mergeObjects(double x, double y, int class_id, int object
   bool evidence_published = false;
   std::vector<int> class_count(15);
 
+  ROS_INFO_STREAM("Merge objects");
+
   std::vector<Object>::iterator it = objects_.begin();
   while(it != objects_.end()) {
       if((std::sqrt(std::pow(it->position.x - x, 2) + std::pow(it->position.y - y, 2)) < same_object_distance_ && similar_objects(it->class_id, class_id)) ||
           std::sqrt(std::pow(it->position.x - x, 2) + std::pow(it->position.y - y, 2)) < object_distance_) {
         x_avg += it->position.x * it->observations;
-        y_avg += it->position.x * it->observations;
+        y_avg += it->position.y * it->observations;
         observations += it->observations;
         for(int i=0; i<it->class_count.size(); ++i) {
           class_count[i] += it->class_count[i];
@@ -59,6 +61,14 @@ void ObjectFilterNode::mergeObjects(double x, double y, int class_id, int object
   merged_object.evidence_published = true;
 
   objects_.push_back(merged_object);
+
+
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = "map";
+  marker.header.stamp = ros::Time();
+  marker.ns = "objects";
+  marker.action = visualization_msgs::Marker::DELETEALL;
+  marker_publisher_.publish(marker);
 }
 
 void ObjectFilterNode::pointcloud_2d_cb(const PointCloud::ConstPtr& msg) {
@@ -133,12 +143,16 @@ void ObjectFilterNode::init_node() {
   std::string pointcloud_3d_topic;
   std::string boundingbox_topic;
   ros::param::param<int>("~threshold", threshold_, 100);
+  ros::param::param<double>("/safe_area/x_min", safearea_xmin_, 0.0);
+  ros::param::param<double>("/safe_area/x_max", safearea_xmax_, 0.5);
+  ros::param::param<double>("/safe_area/y_min", safearea_ymin_, 0.0);
+  ros::param::param<double>("/safe_area/y_max", safearea_ymax_, 0.5);
   ros::param::param<double>("~object_distance", object_distance_, 0.03);
   ros::param::param<double>("~same_object_distance", same_object_distance_, 0.2);
   ros::param::param<std::string>("~pointcloud_3d_topic", pointcloud_3d_topic, "/camera/depth_registered/points");
   ros::param::param<std::string>("~pointcloud_2d_topic", pointcloud_2d_topic, "/camera/pointcloud_2d");
   ros::param::param<std::string>("~classified_object_bounding_boxes_topic", boundingbox_topic, "/object_bounding_boxes_classified");
-  ros::param::param<int>("~required_observations", required_observations_, 10);
+  ros::param::param<int>("~required_observations", required_observations_, 5);
   ros::param::param<bool>("~merge_objects_", merge_objects_, true);
 
   // pointcloud_2d_subscriber_ = nh_.subscribe<PointCloud>(pointcloud_2d_topic, 1, &ObjectFilterNode::pointcloud_2d_cb, this);
@@ -151,6 +165,8 @@ void ObjectFilterNode::init_node() {
 
   reset_objects_service_ = nh_.advertiseService(node_name + "/reset_objects", &ObjectFilterNode::reset_objects_cb, this);
   remove_object_service_ = nh_.advertiseService(node_name + "/remove_object", &ObjectFilterNode::remove_object_cb, this);
+  save_service_ = nh_.advertiseService(node_name + "/save", &ObjectFilterNode::save_cb, this);
+  load_service_ = nh_.advertiseService(node_name + "/load", &ObjectFilterNode::load_cb, this);
 }
 
 void ObjectFilterNode::process_data() {
@@ -211,6 +227,13 @@ void ObjectFilterNode::process_data() {
 }
 
 void ObjectFilterNode::handle_object(double x, double y, int class_id) {
+  if(x >= safearea_xmin_ && x <= safearea_xmax_ && y >= safearea_ymin_ && y <= safearea_ymax_) {
+    return;
+  }
+  if(x<=0 || y <= 0) {
+    return;
+  }
+
   // check if there is a similar object in the map already
   bool new_object = true;
   // ROS_INFO_STREAM(x << " " << y << " " << class_id);
@@ -230,8 +253,8 @@ void ObjectFilterNode::handle_object(double x, double y, int class_id) {
         return; // cant do all the remaining stuff because, the iterator will be invalidated inside mergeObjects
       }
       object_it->class_id = most_likely_class;
-      ROS_INFO_STREAM("Old object: " << object_it->position.x << " " << object_it->position.y << " " << most_likely_class);
-      ROS_INFO_STREAM("Seeing old object id " << object_it - objects_.begin());
+      // ROS_INFO_STREAM("Old object: " << object_it->position.x << " " << object_it->position.y << " " << most_likely_class);
+      // ROS_INFO_STREAM("Seeing old object id " << object_it - objects_.begin());
 
       if(object_it->observations >= required_observations_ and object_it->evidence_published == false) {
         object_it->evidence_published = true;
@@ -313,7 +336,83 @@ void ObjectFilterNode::handle_object(double x, double y, int class_id) {
     objects_.emplace_back(x, y, id_counter++);
     ++objects_.back().class_count.at(class_id);
     objects_.back().observations = 1;
+    objects_.back().class_id = class_id;
     ROS_INFO_STREAM("New object: " << x << " " << y << " " << class_id << ", Total objects: " << objects_.size());
+  }
+}
+
+bool ObjectFilterNode::load_cb(er_perception::ObjectLoadSave::Request& request, er_perception::ObjectLoadSave::Response& response ) {
+  er_perception::DetailedObjectList detailed_object_list;
+
+  try {
+    rosbag::Bag bag;
+    bag.open(request.name + ".objectlist", rosbag::bagmode::Read);
+
+    for(rosbag::MessageInstance const m: rosbag::View(bag, rosbag::TopicQuery("object_list")))
+    {
+      er_perception::DetailedObjectList::ConstPtr i = m.instantiate<er_perception::DetailedObjectList>();
+      detailed_object_list = *i;
+    }
+
+    bag.close();
+
+    objects_.clear();
+    for(auto objects_it = detailed_object_list.detailed_objects.begin(); objects_it!=detailed_object_list.detailed_objects.end(); ++objects_it ) {
+      Object restored_object(objects_it->x, objects_it->y, objects_it->id);
+      restored_object.class_id = objects_it->class_id;
+      restored_object.observations = objects_it->observations;
+      restored_object.class_count = objects_it->class_observations;
+      restored_object.evidence_published = objects_it->evidence_published;
+      objects_.push_back(restored_object);
+    }
+
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "map";
+    marker.header.stamp = ros::Time();
+    marker.ns = "objects";
+    marker.action = visualization_msgs::Marker::DELETEALL;
+    marker_publisher_.publish(marker);
+
+    response.success = true;
+
+    return true;
+  }
+  catch (...) {
+    response.success = false;
+    return true;
+  }
+}
+
+bool ObjectFilterNode::save_cb(er_perception::ObjectLoadSave::Request& request, er_perception::ObjectLoadSave::Response& response ) {
+  // transform object list to rosbag compatible type
+  er_perception::DetailedObjectList detailed_object_list;
+  for(auto objects_it = objects_.begin(); objects_it!=objects_.end(); ++objects_it ) {
+    er_perception::DetailedObject detailed_object;
+    detailed_object.x = objects_it->position.x;
+    detailed_object.y = objects_it->position.y;
+    detailed_object.class_id = objects_it->class_id;
+    detailed_object.observations = objects_it->observations;
+    detailed_object.id = objects_it->id;
+    detailed_object.class_observations = objects_it->class_count;
+    detailed_object.evidence_published = objects_it->evidence_published;
+    detailed_object_list.detailed_objects.push_back(detailed_object);
+  }
+
+  try{
+    rosbag::Bag bag;
+    bag.open(request.name + ".objectlist", rosbag::bagmode::Write);
+
+    bag.write("object_list", ros::Time::now(), detailed_object_list);
+
+    bag.close();
+
+    response.success = true;
+
+    return true;
+  }
+  catch (...) {
+    response.success = false;
+    return true;
   }
 }
 
@@ -364,6 +463,7 @@ void ObjectFilterNode::publish_objects() {
     }
   }
   object_publisher_.publish(objects_msg);
+
 
   // publish rviz markers
   for(auto object_it = objects_.begin(); object_it != objects_.end(); ++object_it) {

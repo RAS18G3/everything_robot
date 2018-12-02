@@ -20,6 +20,11 @@
 #include "pcl_conversions/pcl_conversions.h"
 #include "pcl_ros/transforms.h"
 
+#include "er_navigation/MapLoadSave.h"
+
+#include <rosbag/bag.h>
+#include "rosbag/view.h"
+
 #include <string>
 #include <vector>
 #include <random>
@@ -37,6 +42,8 @@ private:
   // Methods
   void init_node();
   bool reset_localization_cb(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response );
+  bool save_cb(er_navigation::MapLoadSave::Request& request, er_navigation::MapLoadSave::Response& response  );
+  bool load_cb(er_navigation::MapLoadSave::Request& request, er_navigation::MapLoadSave::Response& response );
   void reset_localization();
   void publish_particles();
   void publish_transform();
@@ -47,6 +54,8 @@ private:
   void measurement_update();
   void resample();
   void map_update();
+  bool save_map(std::string name);
+  bool load_map(std::string name);
 
   // Type definitions
   struct Particle {
@@ -71,6 +80,8 @@ private:
   ros::Subscriber pointcloud_subscriber_;
   ros::Rate loop_rate_;
   ros::ServiceServer reset_localization_service_;
+  ros::ServiceServer load_service_;
+  ros::ServiceServer save_service_;
   tf2_ros::TransformBroadcaster transform_broadcaster_;
   tf2_ros::Buffer transform_buffer_;
   tf2_ros::TransformListener transform_listener_;
@@ -103,6 +114,7 @@ private:
   int tracking_particles_;
   double camera_fov_;
   double camera_range_;
+  double safearea_xmin_, safearea_xmax_, safearea_ymin_, safearea_ymax_;
 
 };
 

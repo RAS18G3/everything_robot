@@ -174,6 +174,19 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
 
+  double old_time = ros::Time::now().toSec();
+  geometry_msgs::TransformStamped transformStamped;
+    try{
+      transformStamped = tfBuffer.lookupTransform("map","base_link", ros::Time(0));
+    }
+    catch (tf2::TransformException &ex) {
+      ROS_WARN("%s",ex.what());
+    }
+
+    get_odom(transformStamped);
+    double old_x = odom_x;
+    double old_y = odom_y;
+
   while(ros::ok()){
     //TRANSFORM
   geometry_msgs::TransformStamped transformStamped;
@@ -281,6 +294,21 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
         twist_msg.angular.z = 1*(diff);
 
         forward = true;
+      }
+      if( ros::Time::now().toSec()-old_time > 3.0){
+        double dist = sqrt(pow(odom_x-old_x,2)+pow(odom_y-old_y, 2));
+        old_x = odom_x;
+        old_y = odom_y;
+        if(dist < 0.05){
+          twist_msg.linear.x = -0.1;
+          twist_pub.publish(twist_msg);
+          ros::Duration(1.0).sleep();
+          twist_msg.linear.x = 0;
+          twist_pub.publish(twist_msg);
+          ros::Duration(1.0).sleep();
+          as->setPreempted();
+          break;
+        }
       }
     }
 

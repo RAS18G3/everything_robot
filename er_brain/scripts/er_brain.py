@@ -16,6 +16,9 @@ from nav_msgs.msg import OccupancyGrid
 import random
 import time
 import numpy as np
+import copy
+
+EXPLORE_TIME = 100
 
 class BrainNode:
     def __init__(self):
@@ -162,7 +165,7 @@ class BrainNode:
         k = 0
         start_time = time.time()
         elapsed_time = time.time()-start_time
-        print("reset map")
+        #print("reset map")
         #reset_map = rospy.ServiceProxy('/slam/reset_localization', Trigger);
         #while elapsed_time < 60:
 
@@ -186,9 +189,55 @@ class BrainNode:
                     print("x:"+str(x)+" y:"+str(y))
                     self.goto(x, y)
                     elapsed_time = time.time()-start_time
-                    if elapsed_time > 240:
+                    if elapsed_time > EXPLORE_TIME:
                         print("Exploration time ran out.")
                         loopbreak = True
+        self.goto(0.2, 0.2)
+
+    def explore2(self):
+        while DONE == False:
+            current_x, current_y = self.get_current_pos()
+            fog_map.deepcopy(self.map)
+            grid_x = int((current_x-self.map.origin.position.x)/self.map.info.resolution)
+            grid_y = int((current_y-self.map.origin.position.y)/self.map.info.resolution)
+            found_cell = False
+            for xi in range(25):
+                for yi in range(25):
+                    xg_values = [grid_x+xi, grid_x+xi, grid_x-xi, grid_x-xi]
+                    yg_values = [grid_y+yi, grid_y-yi, grid_y-yi, grid_y+yi]
+                    for i in range(4):
+                        xg = xg_values[i]
+                        yg  = yg_values[i]
+                        if xg >= 0 and yg >= 0 and xg < self.map.info.width and yg < self.map.info.height:
+                            x_coord = xg*self.map.info.resolution+self.map.origin.position.x
+                            y_coord = yg*self.map.info.resolution+self.map.origin.position.y
+                            dist = (grid_x -xg)**2+(grid_y-yg)**2
+                            index = yg*self.map.info.width+xg
+                            if dist < 25**2:
+                                fog_map[index] = 30
+                            if self.map.data[index] > 50 and dist < 25**2:
+                                fog_map[index] = 80
+            #find goto goto cell
+            smallest_dist = 100000
+            next_cell = -1
+            for x in range(self.map.info.width):
+                for y in range(self.map.info.height):
+                    dist = (x-grid_x)**2+(y-grid_y)**2
+                    index = y*self.map.info.width+x
+                    if dist < smallest_dist and fogmap[index] < 10:
+                        next_cell = index
+                        found_cell = True
+            if found_cell:
+                i = 0
+                while next_cell-((i*1)+self.map.info.width) > 0:
+                    i = i+1
+                next_grid_x = next_cell-(i*self.map.info.width)
+                next_grid_y = i
+                next_x_coord = next_grid_x*self.map.info.resolution+self.map.origin.position.x
+                next_y_coord = next_grid_y*self.map.info.resolution+self.map.origin.position.y
+                self.goto(next_x_coord, next_y_coord)
+            else:
+                DONE = True
         self.goto(0.2, 0.2)
 
     def grab(self ,id):
@@ -197,7 +246,10 @@ class BrainNode:
                 success = self.goto(object.x, object.y)
                 if success:
                     success = self.grip()
+                    print('Grab succesfull')
+                    return success
                 else:
+                    print('Grab failed')
                     return False
                 return True
         print('Object id not found')
@@ -205,8 +257,9 @@ class BrainNode:
 
     def grip(self):
         start_grip = rospy.ServiceProxy('/start_grip', Trigger)
-        success = start_grip()
-        return success
+        response = start_grip()
+        print(response)
+        return response.success
 
     def end_grip(self):
         end_grip = rospy.ServiceProxy('/end_grip', Trigger)
@@ -255,7 +308,7 @@ class BrainNode:
             end.pose.position.y = y
             plan = get_plan(start, end, 0)
             print('Path found. Sending to path execution...')
-            print(plan)
+            # print(plan)
 
             # send plan to path execution
             # Creates the SimpleActionClient, passing the type of the action
@@ -280,7 +333,7 @@ class BrainNode:
             if self.path_client.get_state() == 2:
                 print('Obstacle found during execution...')
                 current_x, current_y = self.get_current_pos()
-                if ((current_x - x)**2 + (current_y-y)**2)**0.5 <= 0.25:
+                if ((current_x - x)**2 + (current_y-y)**2)**0.5 <= 0.35:
                     return True
                 else:
                     self.back_up()

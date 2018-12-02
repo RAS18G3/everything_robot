@@ -105,7 +105,7 @@ void ObjectFilterNode::boundingbox_cb(const er_perception::ClassifiedImage::Cons
     // use intrinsics to get position relative to base_link
     double alpha =(x + width/2.0 - 313.0) / 616.;
     double beta =(y + 0.9*height - 239.0) / 616.;
-    double camera_angle = 0.46;
+    double camera_angle = 0.5;
     double height = 0.133;
     double camera_offset_y = 0.09;
     double y_test = (std::cos(camera_angle)*height - beta*std::sin(camera_angle)*height) / ( beta * std::cos(camera_angle) + std::sin(camera_angle) );
@@ -228,6 +228,9 @@ void ObjectFilterNode::process_data() {
 
 void ObjectFilterNode::handle_object(double x, double y, int class_id) {
   if(x >= safearea_xmin_ && x <= safearea_xmax_ && y >= safearea_ymin_ && y <= safearea_ymax_) {
+    return;
+  }
+  if(x<=0 || y <= 0) {
     return;
   }
 

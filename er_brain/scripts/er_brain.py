@@ -18,8 +18,9 @@ import random
 import time
 import numpy as np
 import copy
+import math
 
-EXPLORE_TIME = 120
+EXPLORE_TIME = 240
 
 class BrainNode:
     def __init__(self):
@@ -93,6 +94,9 @@ class BrainNode:
 
             elif snippets[0] == 'explore':
                 self.explore()
+
+            elif snippets[0] == 'explorenew':
+                self.explore_new()
 
             elif snippets[0] == 'explorerandom':
                 self.explore_random()
@@ -266,50 +270,38 @@ class BrainNode:
                         loopbreak = True
         self.goto(0.2, 0.2)
 
-    def explore2(self):
-        while DONE == False:
-            current_x, current_y = self.get_current_pos()
-            fog_map.deepcopy(self.map)
-            grid_x = int((current_x-self.map.origin.position.x)/self.map.info.resolution)
-            grid_y = int((current_y-self.map.origin.position.y)/self.map.info.resolution)
-            found_cell = False
-            for xi in range(25):
-                for yi in range(25):
-                    xg_values = [grid_x+xi, grid_x+xi, grid_x-xi, grid_x-xi]
-                    yg_values = [grid_y+yi, grid_y-yi, grid_y-yi, grid_y+yi]
-                    for i in range(4):
-                        xg = xg_values[i]
-                        yg  = yg_values[i]
-                        if xg >= 0 and yg >= 0 and xg < self.map.info.width and yg < self.map.info.height:
-                            x_coord = xg*self.map.info.resolution+self.map.origin.position.x
-                            y_coord = yg*self.map.info.resolution+self.map.origin.position.y
-                            dist = (grid_x -xg)**2+(grid_y-yg)**2
-                            index = yg*self.map.info.width+xg
-                            if dist < 25**2:
-                                fog_map[index] = 30
-                            if self.map.data[index] > 50 and dist < 25**2:
-                                fog_map[index] = 80
-            #find goto goto cell
-            smallest_dist = 100000
-            next_cell = -1
-            for x in range(self.map.info.width):
-                for y in range(self.map.info.height):
-                    dist = (x-grid_x)**2+(y-grid_y)**2
-                    index = y*self.map.info.width+x
-                    if dist < smallest_dist and fogmap[index] < 10:
-                        next_cell = index
-                        found_cell = True
-            if found_cell:
-                i = 0
-                while next_cell-((i*1)+self.map.info.width) > 0:
-                    i = i+1
-                next_grid_x = next_cell-(i*self.map.info.width)
-                next_grid_y = i
-                next_x_coord = next_grid_x*self.map.info.resolution+self.map.origin.position.x
-                next_y_coord = next_grid_y*self.map.info.resolution+self.map.origin.position.y
-                self.goto(next_x_coord, next_y_coord)
-            else:
-                DONE = True
+    def explore_new(self):
+        count = 0
+        num_points = 20
+        width = self.map.info.width*self.map.info.resolution + 2*self.map.info.origin.position.x
+        height = self.map.info.height*self.map.info.resolution + 2*self.map.info.origin.position.y
+        start_time = time.time()
+        elapsed_time = time.time()-start_time
+        random.seed()
+        current_x, current_y = self.get_current_pos()
+        point_list = []
+        point_list.append([current_x, current_y])
+
+        while elapsed_time < EXPLORE_TIME:
+            for i in range(num_points):
+                largest_dist = 0
+                dist = 0
+                x = random.uniform(0.1, width-0.1)
+                y = random.uniform(0.1, height-0.1)
+                for pos in point_list:
+                    dist = dist + math.sqrt((x-pos[0])**2+(y-pos[1])**2)
+                if dist > largest_dist:
+                    largest_dist = dist
+                    goto_x = x
+                    goto_y = y
+            point_list.append([goto_x, goto_y])
+            print("x:"+str(goto_x)+" y:"+str(goto_y))
+            self.goto(goto_x, goto_y)
+            self.save(count)
+            count += 1
+            elapsed_time = time.time()-start_time
+
+        print("Exploration time ran out.")
         self.goto(0.2, 0.2)
 
     def grab(self ,id):

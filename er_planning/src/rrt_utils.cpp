@@ -32,11 +32,14 @@ bool point_coll(double x1, double y1, double x2, double y2, std::vector<int8_t> 
   vec_x /= vec_magnitude;
   vec_y /= vec_magnitude;
 
+
+  bool x_or_y = false; // false if it's x's turn to increase, true if it's y's turn
   while(1)
   {
     // step once along vector
-    x1 += vec_x;
-    y1 += vec_y;
+    if(x_or_y){ x1 += vec_x; }
+    else      { y1 += vec_y; }
+    x_or_y = !x_or_y;
     double d = point_dist(x1,y1,x2,y2);
     //if (point_dist(x1, y1, x2, y2) < 1)
     if(d<1)

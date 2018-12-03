@@ -12,7 +12,7 @@ import keras
 import os
 from er_perception.msg import ClassifiedImage, ClassifiedBoundingBox
 
-DEBUG = False
+DEBUG = True
 PUBLISH = True
 
 LABELS = ['Yellow Ball', 'Yellow Cube', 'Green Cube', 'Green Cylinder', 'Green Hollow Cube', 'Orange Cross', 'Patric', 'Red Cylinder', 'Red Hollow Cube', 'Red Ball', 'Blue Cube', 'Blue Triangle', 'Purple Cross', 'Purple Star', 'Other']
@@ -40,6 +40,12 @@ class simple_object_detector_node:
     def detect_object(self, data):
         try:
             img = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            # cv2.balance_white(img)
+            img[:,:,0] = np.maximum(1.4*img[:,:,0], 0)
+            img[:,:,1] = np.minimum(1.3*img[:,:,1], 255)
+            img[:,:,2] = np.minimum(0.9*img[:,:,2], 255)
+            # img[:,:,1] = np.maximum(1.3*img[:,:,1], 0)
+            # img[:,:,:] = np.maximum(0.8*img[:,:,:], 0)
         except CvBridgeError as e:
             rospy.logerror('error when converting message to cv2 image')
             rospy.logerror(e)

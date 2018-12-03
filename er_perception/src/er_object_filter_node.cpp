@@ -443,6 +443,8 @@ bool ObjectFilterNode::remove_object_cb( er_perception::RemoveObject::Request& r
       marker.action = visualization_msgs::Marker::DELETE;
       marker.id = request.id;
       marker_publisher_.publish(marker);
+
+      publish_objects();
       return true;
     }
   }

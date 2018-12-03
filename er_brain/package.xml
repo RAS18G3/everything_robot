@@ -22,6 +22,7 @@
   <exec_depend>tf2</exec_depend>
   <exec_depend>tf2_geomtry_msgs</exec_depend>
   <exec_depend>er_perception</exec_depend>
+  <exec_depend>er_navigation</exec_depend>
 
 
   <export>

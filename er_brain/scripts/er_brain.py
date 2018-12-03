@@ -10,15 +10,16 @@ import tf2_ros
 from er_planning.msg import PathAction, PathActionGoal
 from nav_msgs.srv import GetPlan
 from std_srvs.srv import Trigger
-from er_perception.srv import RemoveObject
+from er_perception.srv import RemoveObject, ObjectLoadSave
 from er_perception.msg import ObjectList
+from er_navigation.srv import MapLoadSave
 from nav_msgs.msg import OccupancyGrid
 import random
 import time
 import numpy as np
 import copy
 
-EXPLORE_TIME = 100
+EXPLORE_TIME = 240
 
 class BrainNode:
     def __init__(self):
@@ -30,6 +31,7 @@ class BrainNode:
         self.path_client = actionlib.SimpleActionClient('path', PathAction)
 
         # default values of each object (arbitrary for now):
+        # order is: yellow ball, yellow cube, green cube, green cylinder, green hollow cube, orange cross, patric, red cylindeer, red hollow cube, red ball, blue cube, blue triangle, purple cross purple star
         self.object_values = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,0]
 
         self.object_subscriber = rospy.Subscriber("/objects", ObjectList, self.objects_cb)
@@ -43,10 +45,34 @@ class BrainNode:
     def map_cb(self, OccupancyGrid):
         self.map = OccupancyGrid
 
-    def run(self):
-        command = ''
+    def save(self, id):
+        save_map = rospy.ServiceProxy('/slam/save_map', MapLoadSave)
+        save_objects = rospy.ServiceProxy('/object_filter_node/save', ObjectLoadSave)
+        save_map(str(id))
+        save_objects(str(id))
+
+    def load(self, id):
+        load_map = rospy.ServiceProxy('/slam/load_map', MapLoadSave)
+        load_objects = rospy.ServiceProxy('/object_filter_node/load', ObjectLoadSave)
+        load_map(str(id))
+        load_objects(str(id))
+
+    def reset_map(self):
         reset_map = rospy.ServiceProxy('/slam/reset_localization', Trigger)
         reset_map()
+
+    def reset_objects(self):
+        reset_objects = rospy.ServiceProxy('/object_filter_node/reset_objects', Trigger)
+        reset_objects()
+
+    def reset(self):
+        self.reset_map()
+        rospy.sleep(3.0);
+        self.reset_objects()
+
+    def run(self):
+        command = ''
+        self.reset()
         print("Reset map. Brain ready. Say \'hello\' to the robot.\n")
 
         while command != 'quit' and command != 'exit' and command != 'q':
@@ -64,6 +90,9 @@ class BrainNode:
 
             elif snippets[0] == 'explore':
                 self.explore()
+
+            elif snippets[0] == 'explorerandom':
+                self.explore_random()
 
             elif snippets[0] == 'grab':
                 if len(snippets)==1:
@@ -114,6 +143,21 @@ class BrainNode:
                 print(text)
                 self.speak(text)
 
+            elif snippets[0] == 'save':
+                if len(snippets) == 1:
+                    print('Please provide a name / id to name the map / object file')
+                else:
+                    self.save(snippets[1])
+
+            elif snippets[0] == 'load':
+                if len(snippets) == 1:
+                    print('Please provide a name / id to name the map / object file')
+                else:
+                    self.load(snippets[1])
+
+            elif snippets[0] == 'reset':
+                self.reset()
+
             elif command == 'quit' or command == 'exit' or command == 'q':
                 pass
             else:
@@ -144,14 +188,36 @@ class BrainNode:
             if self.goto(0.2, 0.2):
                 self.end_grip()
                 self.clear(id)
+                return True
             else:
                 print('Error while going back')
                 return False
         else:
-            print('Error while gripping')
+            self.clear(id)
+            print('Error while retrieving')
             return False
 
+    def explore_random(self):
+        count = 0
+        width = self.map.info.width*self.map.info.resolution + 2*self.map.info.origin.position.x
+        height = self.map.info.height*self.map.info.resolution + 2*self.map.info.origin.position.y
+        start_time = time.time()
+        elapsed_time = time.time()-start_time
+
+        while elapsed_time < EXPLORE_TIME:
+            x = random.uniform(0.1, width-0.1)
+            y = random.uniform(0.1, height-0.1)
+            print("x:"+str(x)+" y:"+str(y))
+            self.goto(x, y)
+            self.save(count)
+            count += 1
+            elapsed_time = time.time()-start_time
+
+        print("Exploration time ran out.")
+        self.goto(0.2, 0.2)
+
     def explore(self):
+        count = 0
         x_cells = 2
         y_cells = 2
         points_per_cell = 3
@@ -188,6 +254,8 @@ class BrainNode:
                     y = random.uniform(min_y+0.1, max_y-0.1)
                     print("x:"+str(x)+" y:"+str(y))
                     self.goto(x, y)
+                    # self.save(count)
+                    count += 1
                     elapsed_time = time.time()-start_time
                     if elapsed_time > EXPLORE_TIME:
                         print("Exploration time ran out.")
@@ -246,10 +314,13 @@ class BrainNode:
                 success = self.goto(object.x, object.y)
                 if success:
                     success = self.grip()
-                    print('Grab succesfull')
+                    if success:
+                        print('Grab succesfull')
+                    else:
+                        print('Grab failed')
                     return success
                 else:
-                    print('Grab failed')
+                    print('Going to object failed')
                     return False
                 return True
         print('Object id not found')
@@ -258,7 +329,7 @@ class BrainNode:
     def grip(self):
         start_grip = rospy.ServiceProxy('/start_grip', Trigger)
         response = start_grip()
-        print(response)
+        # print(response)
         return response.success
 
     def end_grip(self):
@@ -380,7 +451,7 @@ class BrainNode:
             for object in self.objects:
                 dist = (object.x-0.2)**2 + (object.y-0.2)**2
                 if object.class_id==index_max and dist > 0.05:
-                    print('Retrieving '+LABELS[index_max]+", internal ID: "+str(object.id))
+                    print('Retrieving ' + LABELS[index_max] + ", internal ID: "+str(object.id))
                     if self.retrieve(object.id):
                         return True
                     else:
@@ -392,6 +463,7 @@ class BrainNode:
         retrieval_success = True
         while(retrieval_success):
             retrieval_success = self.retrieve_best()
+            rospy.sleep(3.0);
 
 if __name__ == '__main__':
     try:

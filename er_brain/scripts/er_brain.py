@@ -33,7 +33,7 @@ class BrainNode:
 
         # default values of each object (arbitrary for now):
         # order is: yellow ball, yellow cube, green cube, green cylinder, green hollow cube, orange cross, patric, red cylindeer, red hollow cube, red ball, blue cube, blue triangle, purple cross purple star
-        self.object_values = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,0]
+        self.object_values = [10000,1000,1000,1000,100,100,5000,1000,100,10000,1000,5000,100,5000]
 
         self.object_subscriber = rospy.Subscriber("/objects", ObjectList, self.objects_cb)
         self.map_subscriber = rospy.Subscriber("/slam/occupancy_grid", OccupancyGrid, self.map_cb)
@@ -223,6 +223,7 @@ class BrainNode:
 
         print("Exploration time ran out.")
         self.goto(0.2, 0.2)
+        self.save(count)
 
     def explore(self):
         count = 0
@@ -269,6 +270,7 @@ class BrainNode:
                         print("Exploration time ran out.")
                         loopbreak = True
         self.goto(0.2, 0.2)
+        self.save(count)
 
     def explore_new(self):
         count = 0
@@ -303,6 +305,7 @@ class BrainNode:
 
         print("Exploration time ran out.")
         self.goto(0.2, 0.2)
+        self.save(count)
 
     def grab(self ,id):
         for object in self.objects:

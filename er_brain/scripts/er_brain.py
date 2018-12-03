@@ -10,8 +10,9 @@ import tf2_ros
 from er_planning.msg import PathAction, PathActionGoal
 from nav_msgs.srv import GetPlan
 from std_srvs.srv import Trigger
-from er_perception.srv import RemoveObject
+from er_perception.srv import RemoveObject, ObjectLoadSave
 from er_perception.msg import ObjectList
+from er_navigation.srv import MapLoadSave
 from nav_msgs.msg import OccupancyGrid
 import random
 import time
@@ -43,6 +44,18 @@ class BrainNode:
 
     def map_cb(self, OccupancyGrid):
         self.map = OccupancyGrid
+
+    def save(self, id):
+        save_map = rospy.ServiceProxy('/slam/save_map', MapLoadSave)
+        save_objects = rospy.ServiceProxy('/object_filter_node/save', ObjectLoadSave)
+        save_map(str(id))
+        save_objects(str(id))
+
+    def load(self, id):
+        load_map = rospy.ServiceProxy('/slam/load_map', MapLoadSave)
+        load_objects = rospy.ServiceProxy('/object_filter_node/load', ObjectLoadSave)
+        load_map(str(id))
+        load_objects(str(id))
 
     def run(self):
         command = ''
@@ -114,6 +127,18 @@ class BrainNode:
                 text = 'Hello, I am Roy the robot. More like Roy-bot. Get it? HA. HA. HA. Destroy all humans. Ha. Ha. Ha.'
                 print(text)
                 self.speak(text)
+
+            elif snippets[0] == 'save':
+                if len(snippets) == 1:
+                    print('Please provide a name / id to name the map / object file')
+                else:
+                    self.save(snippets[1])
+
+            elif snippets[0] == 'load':
+                if len(snippets) == 1:
+                    print('Please provide a name / id to name the map / object file')
+                else:
+                    self.load(snippets[1])
 
             elif command == 'quit' or command == 'exit' or command == 'q':
                 pass

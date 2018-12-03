@@ -19,7 +19,7 @@ import time
 import numpy as np
 import copy
 
-EXPLORE_TIME = 240
+EXPLORE_TIME = 120
 
 class BrainNode:
     def __init__(self):
@@ -319,11 +319,14 @@ class BrainNode:
                 if success:
                     success = self.grip()
                     if success:
+                        self.speak("Grabbed the object")
                         print('Grab succesfull')
                     else:
+                        self.speak("Could not grab the object")
                         print('Grab failed')
                     return success
                 else:
+                    self.speak("Could not go to object")
                     print('Going to object failed')
                     return False
                 return True
@@ -366,9 +369,11 @@ class BrainNode:
     def goto(self, x, y, remaining_replans=5):
         # find current robot position
         if remaining_replans == 0:
+            self.speak("Had to replan too often, cancel...")
             print("Had to replan too often, cancel...")
             return False
 
+        self.speak("Lets go somewhere")
         current_x, current_y = self.get_current_pos()
 
         print('Trying to find path from {0},{1} to {2},{3}'.format(current_x, current_y, x, y))
@@ -383,6 +388,8 @@ class BrainNode:
             end.pose.position.y = y
             plan = get_plan(start, end, 0)
             print('Path found. Sending to path execution...')
+
+            self.speak("Path found")
             # print(plan)
 
             # send plan to path execution
@@ -409,11 +416,14 @@ class BrainNode:
                 print('Obstacle found during execution...')
                 current_x, current_y = self.get_current_pos()
                 if ((current_x - x)**2 + (current_y-y)**2)**0.5 <= 0.35:
+                    self.speak("I reached my goal")
                     return True
                 else:
                     self.back_up()
+                    self.speak("I got stuck. Let's try again.")
                     return self.goto(x,y,remaining_replans-1)
             if self.path_client.get_state() == 3:
+                self.speak("I reached my goal")
                 print('Path succesfully executed')
                 return True
         except rospy.ServiceException, e:
@@ -424,6 +434,8 @@ class BrainNode:
         speak_msg = String()
         speak_msg.data = text
         self.speak_publisher.publish(speak_msg)
+        rospy.sleep(0.2);
+
 
     def reevaluate_object(self,object_index,value):
         # skeleton to set new value to a given object while brain is running
@@ -456,14 +468,19 @@ class BrainNode:
                 dist = (object.x-0.2)**2 + (object.y-0.2)**2
                 if object.class_id==index_max and dist > 0.05:
                     print('Retrieving ' + LABELS[index_max] + ", internal ID: "+str(object.id))
+
+                    self.speak('Retrieving ' + LABELS[index_max])
                     if self.retrieve(object.id):
+                        self.speak('Finally retrieved ' + LABELS[index_max])
                         return True
                     else:
                         print("Cannot retrieve object "+str(object.id)+", "+LABELS[index_max])
+                        self.speak('Can not retrieve ' + LABELS[index_max])
             # if not, set the most valuable to 0 and go for the next
             object_vals[index_max] = 0
 
     def retrieve_all(self):
+        self.speak('Lets get all the objects.')
         retrieval_success = True
         while(retrieval_success):
             retrieval_success = self.retrieve_best()

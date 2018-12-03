@@ -295,10 +295,11 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
 
         forward = true;
       }
-      if( ros::Time::now().toSec()-old_time > 3.0){
+      if( ros::Time::now().toSec()-old_time > 15.0){
         double dist = sqrt(pow(odom_x-old_x,2)+pow(odom_y-old_y, 2));
         old_x = odom_x;
         old_y = odom_y;
+        old_time = ros::Time::now().toSec();
         if(dist < 0.05){
           twist_msg.linear.x = -0.1;
           twist_pub.publish(twist_msg);
@@ -306,8 +307,7 @@ void execute(const er_planning::PathGoal::ConstPtr& goal, Server* as){
           twist_msg.linear.x = 0;
           twist_pub.publish(twist_msg);
           ros::Duration(1.0).sleep();
-          as->setPreempted();
-          break;
+          //as->setPreempted();
         }
       }
     }

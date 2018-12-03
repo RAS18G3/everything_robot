@@ -50,6 +50,9 @@ class BrainNode:
         save_objects = rospy.ServiceProxy('/object_filter_node/save', ObjectLoadSave)
         save_map(str(id))
         save_objects(str(id))
+        print('######################## ' )
+        print('###### Saving map ' + str(id) )
+        print('########################')
 
     def load(self, id):
         load_map = rospy.ServiceProxy('/slam/load_map', MapLoadSave)
@@ -203,6 +206,7 @@ class BrainNode:
         height = self.map.info.height*self.map.info.resolution + 2*self.map.info.origin.position.y
         start_time = time.time()
         elapsed_time = time.time()-start_time
+        random.seed()
 
         while elapsed_time < EXPLORE_TIME:
             x = random.uniform(0.1, width-0.1)

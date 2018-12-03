@@ -30,6 +30,7 @@ class BrainNode:
         self.path_client = actionlib.SimpleActionClient('path', PathAction)
 
         # default values of each object (arbitrary for now):
+        # order is: yellow ball, yellow cube, green cube, green cylinder, green hollow cube, orange cross, patric, red cylindeer, red hollow cube, red ball, blue cube, blue triangle, purple cross purple star
         self.object_values = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,0]
 
         self.object_subscriber = rospy.Subscriber("/objects", ObjectList, self.objects_cb)

@@ -356,16 +356,20 @@ bool ObjectFilterNode::load_cb(er_perception::ObjectLoadSave::Request& request, 
 
     bag.close();
 
+    int max_id = 0;
+
     objects_.clear();
     for(auto objects_it = detailed_object_list.detailed_objects.begin(); objects_it!=detailed_object_list.detailed_objects.end(); ++objects_it ) {
       Object restored_object(objects_it->x, objects_it->y, objects_it->id);
+      if(objects_it->id >= max_id)
+          max_id = objects_it->id;
       restored_object.class_id = objects_it->class_id;
       restored_object.observations = objects_it->observations;
       restored_object.class_count = objects_it->class_observations;
       restored_object.evidence_published = objects_it->evidence_published;
       objects_.push_back(restored_object);
     }
-
+    id_counter = max_id + 1;
     visualization_msgs::Marker marker;
     marker.header.frame_id = "map";
     marker.header.stamp = ros::Time();

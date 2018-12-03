@@ -43,7 +43,7 @@ bool grab_cb(std_srvs::Trigger::Request  &req,
       ROS_INFO("Close in on the object");
       twist_msg.linear.x = 0.1;
       twist_pub.publish(twist_msg);
-      ros::Duration(1.5).sleep();
+      ros::Duration(1.2).sleep();
 
       twist_msg.linear.x = 0;
       twist_pub.publish(twist_msg);
@@ -55,11 +55,11 @@ bool grab_cb(std_srvs::Trigger::Request  &req,
       res.success = true;
       done = true;
 
-      //twist_msg.linear.x = -0.1;
-      //twist_pub.publish(twist_msg);
-      //ros::Duration(1.5).sleep();
-      //twist_msg.linear.x = 0;
-      //twist_pub.publish(twist_msg);
+      twist_msg.linear.x = -0.1;
+      twist_pub.publish(twist_msg);
+      ros::Duration(0.5).sleep();
+      twist_msg.linear.x = 0;
+      twist_pub.publish(twist_msg);
     }
   }
   grab_controller_running = false;

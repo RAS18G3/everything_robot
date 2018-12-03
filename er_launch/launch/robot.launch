@@ -82,14 +82,14 @@
 
   <node name="obstacle_detection_node" pkg="er_perception" type="er_obstacle_detection_node" output="screen">
     <!-- note that the robots wheel axis will be at 0, thus if we position the camera correctly in 3d, ground will be negative (optimally at -wheel_radius)-->
-    <param name="range" value="0.25" />
+    <param name="range" value="0.28" />
     <param name="threshold" value="50" />
   </node>
 
   <node name="simple_object_detector_node" pkg="er_perception" type="er_cnn_object_detector_node.py" output="screen" />
 
   <node name="pathfinder_node" pkg="er_planning" type="er_pathfinder_node" output="screen">
-    <param name="dilusion_radius" value="0.14" />
+    <param name="dilusion_radius" value="0.15" />
   </node>
 
   <node name="look_forward_drive_node" pkg="er_navigation" type="look_forward_drive" output="screen"/>

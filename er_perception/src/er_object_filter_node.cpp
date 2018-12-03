@@ -58,7 +58,7 @@ void ObjectFilterNode::mergeObjects(double x, double y, int class_id, int object
   merged_object.class_count = class_count;
   merged_object.observations = observations;
   merged_object.class_id = std::max_element(merged_object.class_count.begin(), merged_object.class_count.end()) - merged_object.class_count.begin();
-  merged_object.evidence_published = true;
+  merged_object.evidence_published = evidence_published;
 
   objects_.push_back(merged_object);
 

@@ -41,9 +41,9 @@ class simple_object_detector_node:
         try:
             img = self.bridge.imgmsg_to_cv2(data, "bgr8")
             # cv2.balance_white(img)
-            img[:,:,0] = np.maximum(1.4*img[:,:,0], 0)
-            img[:,:,1] = np.minimum(1.3*img[:,:,1], 255)
-            img[:,:,2] = np.minimum(0.9*img[:,:,2], 255)
+            #img[:,:,0] = np.maximum(1.4*img[:,:,0], 0)
+            #img[:,:,1] = np.minimum(1.3*img[:,:,1], 255)
+            #img[:,:,2] = np.minimum(0.9*img[:,:,2], 255)
             # img[:,:,1] = np.maximum(1.3*img[:,:,1], 0)
             # img[:,:,:] = np.maximum(0.8*img[:,:,:], 0)
         except CvBridgeError as e:

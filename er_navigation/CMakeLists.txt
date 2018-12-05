@@ -36,16 +36,13 @@ include_directories(
 )
 
 add_executable(er_slam_node src/er_slam_node.cpp src/map_reader.cpp src/occupancy_grid_utils.cpp)
-add_executable(er_drive_node src/er_drive_node.cpp)
 add_executable(look_forward_drive src/look_forward_drive.cpp)
 add_executable(er_explore_node src/er_explore_node.cpp)
 
 add_dependencies(er_slam_node er_navigation_generate_messages_cpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(er_drive_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(look_forward_drive ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(er_explore_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(er_slam_node ${catkin_LIBRARIES})
-target_link_libraries(er_drive_node ${catkin_LIBRARIES})
 target_link_libraries(look_forward_drive ${catkin_LIBRARIES})
 target_link_libraries(er_explore_node ${catkin_LIBRARIES})
